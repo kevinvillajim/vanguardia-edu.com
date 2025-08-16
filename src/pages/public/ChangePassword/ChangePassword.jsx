@@ -32,7 +32,7 @@ export default function ChangePassword() {
 		<div className="flex flex-col flex-wrap items-center justify-center h-screen">
 			<form onSubmit={handleChangePassword} className="md:w-[40rem] p-[2rem]">
 				<h2 className="text-[1.5rem] mb-[1rem]">
-					Bienvenido a la plataforma educativa de Cooprogreso
+					Bienvenido a la plataforma educativa de VanguardIA
 				</h2>
 				<h2 className="text-[1.2rem] mb-[1rem]">
 					Por favor cambia tu contraseña de acceso.

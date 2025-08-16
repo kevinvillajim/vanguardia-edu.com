@@ -1,5 +1,6 @@
 // src/pages/public/Home/ModernHome.jsx
 import {useState, useEffect} from "react";
+import {Link, useLocation} from "react-router-dom";
 import {motion, useScroll, useTransform, AnimatePresence} from "framer-motion";
 import {Button, Card} from "../../../components/ui";
 import ThemeToggle from "../../../components/ui/ThemeToggle";
@@ -7,6 +8,7 @@ import ThemeToggle from "../../../components/ui/ThemeToggle";
 const ModernHome = () => {
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
 	const [activeSection, setActiveSection] = useState("hero");
+	const location = useLocation();
 	const {scrollY} = useScroll();
 
 	const heroOpacity = useTransform(scrollY, [0, 300], [1, 0]);
@@ -61,8 +63,8 @@ const ModernHome = () => {
 			),
 			title: "Certificación Oficial",
 			description:
-				"Obtén certificados al completar las capacitaciones requeridas por Cooprogreso.",
-			color: "from-primary-500 to-primary-700",
+				"Obtén certificados al completar las capacitaciones requeridas por VanguardIA.",
+			color: "from-primary-800 to-secondary-800",
 		},
 		{
 			icon: (
@@ -83,7 +85,7 @@ const ModernHome = () => {
 			title: "Contenido Especializado",
 			description:
 				"Capacitaciones diseñadas específicamente para el equipo humano de nuestra cooperativa.",
-			color: "from-secondary-500 to-primary-600",
+			color: "from-primary-800 to-secondary-800",
 		},
 		{
 			icon: (
@@ -104,7 +106,7 @@ const ModernHome = () => {
 			title: "Formación Continua",
 			description:
 				"Acceso 24/7 para completar tus capacitaciones requeridas a tu ritmo.",
-			color: "from-success-500 to-secondary-500",
+			color: "from-primary-800 to-secondary-800",
 		},
 		{
 			icon: (
@@ -122,10 +124,10 @@ const ModernHome = () => {
 					/>
 				</svg>
 			),
-			title: "Equipo Cooprogreso",
+			title: "Equipo VanguardIA",
 			description:
 				"Forma parte del desarrollo profesional de nuestro talento humano.",
-			color: "from-primary-600 to-primary-900",
+			color: "from-primary-800 to-secondary-800",
 		},
 	];
 
@@ -138,10 +140,18 @@ const ModernHome = () => {
 	];
 
 	const navigationItems = [
-		{label: "Inicio", href: "#hero"},
-		{label: "Características", href: "#features"},
-		{label: "Contacto", href: "#contact"},
+		{label: "Inicio", path: "/"},
+		{label: "Cursos", path: "/cursos"},
+		{label: "Acerca de", path: "/acerca-de"},
+		{label: "Contacto", path: "/contacto"},
 	];
+
+	const isActive = (path) => {
+		if (path === "/") {
+			return location.pathname === "/" || location.pathname === "/home";
+		}
+		return location.pathname === path;
+	};
 
 	return (
     <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
@@ -165,29 +175,31 @@ const ModernHome = () => {
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
               {navigationItems.map((item) => (
-                <a
+                <Link
                   key={item.label}
-                  href={item.href}
+                  to={item.path}
                   className={`text-sm font-medium transition-colors ${
-                    activeSection === item.href.slice(1)
+                    isActive(item.path)
                       ? "text-primary-600 dark:text-primary-400"
                       : "text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400"
                   }`}
                 >
                   {item.label}
-                </a>
+                </Link>
               ))}
             </div>
 
             {/* Actions */}
             <div className="flex items-center space-x-4">
               <ThemeToggle />
-              <Button
-                variant="outline"
-                size="sm"
-              >
-                <a href="/login">Iniciar Sesión</a>
-              </Button>
+              <Link to="/login">
+                <Button
+                  variant="outline"
+                  size="sm"
+                >
+                  Iniciar Sesión
+                </Button>
+              </Link>
              
 
               {/* Mobile Menu Button */}
@@ -224,14 +236,14 @@ const ModernHome = () => {
             >
               <div className="px-4 py-4 space-y-2">
                 {navigationItems.map((item) => (
-                  <a
+                  <Link
                     key={item.label}
-                    href={item.href}
+                    to={item.path}
                     onClick={() => setIsMenuOpen(false)}
                     className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
                   >
                     {item.label}
-                  </a>
+                  </Link>
                 ))}
               </div>
             </motion.div>
@@ -287,7 +299,7 @@ const ModernHome = () => {
           >
             Plataforma de{" "}
             <span className="bg-gradient-to-r from-primary-600 to-primary-900 bg-clip-text text-transparent">
-              Capacitación Cooprogreso
+              Capacitación VanguardIA
             </span>
           </motion.h1>
 
@@ -297,7 +309,7 @@ const ModernHome = () => {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="text-xl md:text-2xl text-gray-600 dark:text-gray-400 mb-12 max-w-3xl mx-auto leading-relaxed"
           >
-            Tu espacio de crecimiento profesional en Cooprogreso. Descubre
+            Tu espacio de crecimiento profesional en VanguardIA. Descubre
             capacitaciones especializadas que impulsan tu carrera y fortalecen
             nuestros valores cooperativos.
           </motion.p>
@@ -308,50 +320,54 @@ const ModernHome = () => {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6 mb-16"
           >
-            <Button
-              variant="primary"
-              size="lg"
-              className="text-lg px-8 py-4"
-              rightIcon={
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              }
-            >
-              <a href="/login">Acceder al Portal</a>
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              className="text-lg px-8 py-4"
-              leftIcon={
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-              }
-            >
-              Ver Capacitaciones
-            </Button>
+            <Link to="/login">
+              <Button
+                variant="primary"
+                size="lg"
+                className="text-lg px-8 py-4"
+                rightIcon={
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                }
+              >
+                Acceder al Portal
+              </Button>
+            </Link>
+            <Link to="/cursos">
+              <Button
+                variant="outline"
+                size="lg"
+                className="text-lg px-8 py-4"
+                leftIcon={
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                }
+              >
+                Ver Capacitaciones
+              </Button>
+            </Link>
           </motion.div>
 
           {/* Stats */}
@@ -407,7 +423,7 @@ const ModernHome = () => {
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
               Diseñada especialmente para el desarrollo profesional de nuestro
-              equipo Cooprogreso
+              equipo VanguardIA
             </p>
           </motion.div>
 
@@ -428,7 +444,7 @@ const ModernHome = () => {
                   className="h-full text-center"
                 >
                   <div
-                    className={`inline-flex p-4 rounded-2xl bg-gradient-to-r ${feature.color} text-white mb-6 group-hover:scale-110 transition-transform duration-300`}
+                    className={`inline-flex p-4 rounded-2xl bg-gradient-to-br ${feature.color} text-white mb-6 group-hover:scale-110 transition-transform duration-300`}
                   >
                     {feature.icon}
                   </div>
@@ -456,7 +472,7 @@ const ModernHome = () => {
               <div className="flex items-center space-x-3 mb-6">
                 <img
                   src="/logo.png"
-                  alt="Cooprogreso Logo"
+                  alt="VanguardIA Logo"
                   className="h-10"
                 />
               </div>
@@ -553,7 +569,7 @@ const ModernHome = () => {
           {/* Footer final */}
           <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col sm:flex-row items-center justify-between">
             <p className="text-gray-400 text-sm">
-              © 2024 Cooprogreso. Todos los derechos reservados.
+              © 2024 VanguardIA. Todos los derechos reservados.
             </p>
             <div className="flex space-x-6 mt-4 sm:mt-0">
               <a

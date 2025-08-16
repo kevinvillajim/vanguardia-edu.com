@@ -22,6 +22,9 @@ const Card = ({
 		elevated: "border-0 shadow-lg",
 		outlined: "border-2 border-gray-300 dark:border-gray-600",
 		glass: "bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-white/20",
+		primary: "border-2 border-primary-200 bg-primary-50 dark:bg-primary-900/20",
+		acent: "border-2 border-acent-200 bg-acent-50 dark:bg-acent-900/20",
+		secondary: "border-2 border-secondary-300 bg-secondary-50 dark:bg-secondary-900/20",
 	};
 
 	const paddings = {
@@ -64,7 +67,7 @@ const Card = ({
 
 Card.propTypes = {
 	children: PropTypes.node.isRequired,
-	variant: PropTypes.oneOf(["default", "elevated", "outlined", "glass"]),
+	variant: PropTypes.oneOf(["default", "elevated", "outlined", "glass", "primary", "acent", "secondary"]),
 	padding: PropTypes.oneOf(["none", "sm", "md", "lg", "xl"]),
 	shadow: PropTypes.oneOf(["none", "sm", "md", "lg", "xl"]),
 	hover: PropTypes.bool,

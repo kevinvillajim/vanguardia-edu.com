@@ -25,15 +25,21 @@ const Button = ({
 
 	const variants = {
 		primary: `
-      bg-gradient-to-r from-primary-500 to-primary-900 text-white
+      bg-gradient-to-br from-primary-800 to-secondary-900 text-white
       hover:from-primary-600 hover:to-primary-900
       focus:ring-primary-500 shadow-lg hover:shadow-xl
       active:scale-95
     `,
+		acent: `
+      bg-gradient-to-br from-acent-500 to-acent-700 text-white
+      hover:from-acent-400 hover:to-acent-600
+      focus:ring-acent-500 shadow-lg hover:shadow-xl
+      active:scale-95
+    `,
 		secondary: `
-      bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-      border-2 border-primary-200 dark:border-primary-600
-      hover:bg-primary-50 dark:hover:bg-gray-700
+      bg-white dark:bg-gray-800 text-primary-500 dark:text-white
+      border-2 border-secondary-300 dark:border-primary-600
+      hover:bg-secondary-300 dark:hover:bg-gray-700
       focus:ring-primary-500 shadow-md hover:shadow-lg
       active:scale-95
     `,
@@ -55,9 +61,9 @@ const Button = ({
       active:scale-95
     `,
 		success: `
-      bg-gradient-to-r from-primary-500 to-primary-700 text-white
-      hover:from-primary-600 hover:to-primary-800
-      focus:ring-primary-500 shadow-lg hover:shadow-xl
+      bg-gradient-to-r from-success-500 to-success-700 text-white
+      hover:from-success-600 hover:to-success-800
+      focus:ring-success-500 shadow-lg hover:shadow-xl
       active:scale-95
     `,
 	};
@@ -115,6 +121,7 @@ Button.propTypes = {
 	children: PropTypes.node.isRequired,
 	variant: PropTypes.oneOf([
 		"primary",
+		"acent",
 		"secondary",
 		"outline",
 		"ghost",

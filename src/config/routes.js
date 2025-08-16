@@ -3,6 +3,9 @@ export const ROUTES = {
 	// Rutas públicas
 	HOME: "/",
 	LOGIN: "/login",
+	CURSOS: "/cursos",
+	CONTACT: "/contacto",
+	ABOUT: "/acerca-de",
 
 	// Rutas protegidas
 	CHANGE_PASSWORD: "/change-password",

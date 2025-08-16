@@ -132,7 +132,7 @@ const ModernLogin = () => {
 			),
 			title: "Programas Especializados",
 			description:
-				"Descubre capacitaciones diseñadas para impulsar tu crecimiento profesional en Cooprogreso.",
+				"Descubre capacitaciones diseñadas para impulsar tu crecimiento profesional en VanguardIA.",
 		},
 		{
 			icon: (
@@ -220,15 +220,15 @@ const ModernLogin = () => {
 						<div className="flex items-center space-x-3 mb-12">
 							<img 
 								src="/logo.png" 
-								alt="Cooprogreso" 
-								className="h-14 object-contain bg-white/75 rounded-xl p-4 backdrop-blur-sm"
+								alt="VanguardIA" 
+								className="h-18"
 							/>
 						</div>
 
 						<h2 className="text-4xl font-bold mb-6 leading-tight">
 							Tu centro de desarrollo en
-							<span className="block bg-gradient-to-r from-yellow-300 to-green-300 bg-clip-text text-transparent">
-								Cooprogreso
+							<span className="block bg-gradient-to-r from-acent-500 to-green-300 bg-clip-text text-transparent">
+								VanguardIA
 							</span>
 						</h2>
 
@@ -278,8 +278,8 @@ const ModernLogin = () => {
 						<div className="flex items-center space-x-3">
 							<img 
 								src="/logo.png" 
-								alt="Cooprogreso" 
-								className="h-12 object-contain"
+								alt="VanguardIA" 
+								className="h-[60px] object-contain"
 							/>
 							
 						</div>
@@ -424,7 +424,7 @@ const ModernLogin = () => {
 
 							<Button
 								type="submit"
-								variant="primary"
+								variant="acent"
 								size="lg"
 								fullWidth
 								loading={loading}

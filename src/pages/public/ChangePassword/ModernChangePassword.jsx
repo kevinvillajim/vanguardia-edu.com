@@ -148,7 +148,7 @@ const ModernChangePassword = () => {
 							Cambiar Contraseña
 						</h1>
 						<p className="text-gray-600 dark:text-gray-400">
-							Bienvenido a la plataforma educativa de Cooprogreso
+							Bienvenido a la plataforma educativa de VanguardIA
 						</p>
 						<p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
 							Por favor establece una nueva contraseña segura

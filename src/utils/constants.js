@@ -4,7 +4,7 @@
 import {API_ENDPOINTS as IMPORTED_ENDPOINTS} from "../services/api/endpoints";
 
 export const APP_CONFIG = {
-	APP_NAME: "Plataforma Educativa Cooprogreso",
+	APP_NAME: "Plataforma Educativa VanguardIA",
 	APP_VERSION: "2.0.0",
 	API_BASE_URL:
 		import.meta.env.REACT_APP_API_URL ||
@@ -239,11 +239,11 @@ export const BREAKPOINTS = {
 };
 
 export const THEME_COLORS = {
-	PRIMARY: "#95c11f", // Verde principal Cooprogreso
-	PRIMARY_DARK: "#006938", // Verde oscuro Cooprogreso
-	SECONDARY: "#9fc8b5", // Verde medio Cooprogreso
-	BACKGROUND: "#fefffe", // Blanco Cooprogreso
-	BACKGROUND_LIGHT: "#e7f1e3", // Verde muy claro Cooprogreso
+	PRIMARY: "#95c11f", // Verde principal VanguardIA
+	PRIMARY_DARK: "#006938", // Verde oscuro VanguardIA
+	SECONDARY: "#9fc8b5", // Verde medio VanguardIA
+	BACKGROUND: "#fefffe", // Blanco VanguardIA
+	BACKGROUND_LIGHT: "#e7f1e3", // Verde muy claro VanguardIA
 	SUCCESS: "#95c11f",
 	WARNING: "#f59e0b",
 	ERROR: "#ef4444",
@@ -288,7 +288,7 @@ export const QUIZ_CONFIG = {
 export const CERTIFICATE_CONFIG = {
 	FORMAT: "PDF",
 	TEMPLATE: "default",
-	AUTHOR: "Cooperativa de Ahorro y Crédito Cooprogreso",
+	AUTHOR: "Cooperativa de Ahorro y Crédito VanguardIA",
 };
 
 // ============================================================================

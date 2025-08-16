@@ -6,14 +6,14 @@
   /* --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
    */
   /* Colores base */
-  --color-primary: #95c11f; /* Verde principal Cooprogreso */
-  --color-primary-dark: #006938; /* Verde oscuro Cooprogreso */
-  --color-secondary: #9fc8b5; /* Verde medio Cooprogreso */
+  --color-primary: #95c11f; /* Verde principal VanguardIA */
+  --color-primary-dark: #006938; /* Verde oscuro VanguardIA */
+  --color-secondary: #9fc8b5; /* Verde medio VanguardIA */
   --color-success: #95c11f;
   --color-warning: #f59e0b;
   --color-error: #ef4444;
-  --color-background: #fefffe; /* Blanco Cooprogreso */
-  --color-background-light: #e7f1e3; /* Verde muy claro Cooprogreso */
+  --color-background: #fefffe; /* Blanco VanguardIA */
+  --color-background-light: #e7f1e3; /* Verde muy claro VanguardIA */
   
   /* Espaciado */
   --spacing-xs: 0.25rem;

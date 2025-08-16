@@ -62,7 +62,7 @@ const ModernTemplate = ({children, rol, title}) => {
 										transition={{duration: 0.2}}
 									>
 										<h1 className="text-xl font-bold text-gray-900 dark:text-white">
-											Cooprogreso
+											VanguardIA
 										</h1>
 									</motion.div>
 								)}

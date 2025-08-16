@@ -1,6 +1,7 @@
 export {default as About} from "./About/About";
 export {default as Footer} from "./Footer/Footer";
 export {default as Header} from "./Header/Header";
+export {default as PublicHeader} from "./Header/PublicHeader";
 export {default as HeaderCourse} from "./Header/HeaderCourse";
 export {default as HeaderIn} from "./Header/HeaderIn";
 export {default as ProtectedRoute} from "./ProtectedRoute";

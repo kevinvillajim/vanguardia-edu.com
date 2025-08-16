@@ -1,42 +1,54 @@
 // src/styles/tokens.js
 export const tokens = {
-	// Colores principales basados en paleta Cooprogreso
+	// Colores principales - Paleta 1: Innovación Académica
 	colors: {
 		primary: {
-			50: "#e7f1e3",
-			100: "#d4e8ca", 
-			200: "#b8dba3",
-			300: "#9fc8b5",
-			400: "#95c11f",
-			500: "#95c11f", // verde claro principal
-			600: "#7aa319",
-			700: "#5f8514",
-			800: "#44670f",
-			900: "#006938", // verde oscuro
+			50: "#f3f0fd",
+			100: "#e8e1fb",
+			200: "#d4c7f7",
+			300: "#b9a3f0",
+			400: "#9775e6",
+			500: "#5D3FD3", // púrpura profundo principal
+			600: "#4f35b8",
+			700: "#422c9e",
+			800: "#372584",
+			900: "#2d1e6a",
 		},
 		secondary: {
-			50: "#e7f1e3",
-			100: "#d4e8ca",
-			200: "#b8dba3", 
-			300: "#9fc8b5", // verde medio principal
-			400: "#85a699",
-			500: "#9fc8b5",
-			600: "#7aa391",
-			700: "#5f7f6d",
-			800: "#445b49",
-			900: "#006938",
+			50: "#f9f5fc",
+			100: "#f3ebf9",
+			200: "#e7d7f3", 
+			300: "#CDB4DB", // lila suave principal
+			400: "#c19ed6",
+			500: "#b088d1",
+			600: "#9f72cc",
+			700: "#8e5cc7",
+			800: "#7d46c2",
+			900: "#6c30bd",
+		},
+		acent: {
+			50: "#fff7ed",
+			100: "#ffedd5",
+			200: "#fed7aa",
+			300: "#fdba74",
+			400: "#fb923c",
+			500: "#FF9F1C", // naranja brillante principal
+			600: "#ea580c",
+			700: "#c2410c",
+			800: "#9a3412",
+			900: "#7c2d12",
 		},
 		success: {
-			50: "#e7f1e3",
-			100: "#d4e8ca",
-			200: "#b8dba3",
-			300: "#9fc8b5",
-			400: "#95c11f",
-			500: "#95c11f",
-			600: "#7aa319",
-			700: "#5f8514",
-			800: "#44670f",
-			900: "#006938",
+			50: "#f0fdf4",
+			100: "#dcfce7",
+			200: "#bbf7d0",
+			300: "#86efac",
+			400: "#4ade80",
+			500: "#22c55e",
+			600: "#16a34a",
+			700: "#15803d",
+			800: "#166534",
+			900: "#14532d",
 		},
 		warning: {
 			50: "#fffbeb",
@@ -63,16 +75,16 @@ export const tokens = {
 			900: "#7f1d1d",
 		},
 		neutral: {
-			50: "#fefffe", // blanco principal
-			100: "#f5f5f5",
-			200: "#e5e5e5",
-			300: "#d4d4d4",
-			400: "#a3a3a3",
-			500: "#737373",
-			600: "#525252",
-			700: "#404040",
-			800: "#262626",
-			900: "#171717",
+			50: "#FFFFFF", // blanco principal
+			100: "#f9fafb",
+			200: "#f3f4f6",
+			300: "#d1d5db",
+			400: "#9ca3af",
+			500: "#6b7280",
+			600: "#4b5563",
+			700: "#374151",
+			800: "#1f2937",
+			900: "#212121", // gris antracita
 		},
 	},
 

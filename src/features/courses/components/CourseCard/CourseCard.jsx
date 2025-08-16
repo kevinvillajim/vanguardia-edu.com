@@ -57,8 +57,8 @@ const ModernCourseCard = ({
 			whileHover={{y: -8, transition: {duration: 0.2}}}
 			className={`
         relative overflow-hidden bg-white dark:bg-gray-800 
-        rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700
-        hover:shadow-xl transition-all duration-300 cursor-pointer
+        rounded-2xl shadow-lg border border-secondary-300 dark:border-gray-700
+        hover:shadow-xl hover:border-primary-500 transition-all duration-300 cursor-pointer
         ${isLocked ? "opacity-60 cursor-not-allowed" : ""}
         ${className}
       `}
@@ -91,7 +91,7 @@ const ModernCourseCard = ({
 			{/* New Badge */}
 			{isNew && (
 				<div className="absolute top-4 left-4 z-20">
-					<span className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+					<span className="bg-gradient-to-r from-acent-500 to-acent-700 text-white px-3 py-1 rounded-full text-xs font-medium">
 						Nuevo
 					</span>
 				</div>
@@ -122,7 +122,7 @@ const ModernCourseCard = ({
 						initial={{width: 0}}
 						animate={{width: `${progress}%`}}
 						transition={{duration: 1, delay: 0.5}}
-						className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+						className="h-full bg-gradient-to-r from-primary-500 to-acent-500"
 					/>
 				</div>
 			</div>
@@ -214,7 +214,7 @@ const ModernCourseCard = ({
 				{/* Instructor */}
 				{instructor && (
 					<div className="flex items-center space-x-2 mb-4">
-						<div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+						<div className="w-6 h-6 bg-gradient-to-br from-primary-500 to-acent-500 rounded-full flex items-center justify-center">
 							<span className="text-white text-xs font-medium">
 								{instructor.charAt(0).toUpperCase()}
 							</span>
@@ -234,7 +234,7 @@ const ModernCourseCard = ({
 					</div>
 
 					<Button
-						variant={progress > 0 ? "secondary" : "primary"}
+						variant={progress > 0 ? "secondary" : "acent"}
 						size="sm"
 						disabled={isLocked}
 						rightIcon={

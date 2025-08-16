@@ -21,6 +21,9 @@ import {ProtectedRoute, RoleRoute} from "./components/layout";
 // Modern Pages
 import ModernHome from "./pages/public/Home/ModernHome";
 import ModernLogin from "./pages/public/Login/Login";
+import CursosPage from "./pages/public/Cursos/Cursos";
+import ContactPage from "./pages/public/Contact/Contact";
+import About from "./components/layout/About/About";
 import ModernAdminDashboard from "./pages/admin/Dashboard/ModernDashboard";
 import ModernUsers from "./pages/admin/Users/ModernUsers";
 import ModernStudents from "./pages/admin/Students/ModernStudents";
@@ -94,6 +97,30 @@ function App() {
 												element={
 													<PageTransition>
 														<ModernLogin />
+													</PageTransition>
+												}
+											/>
+											<Route
+												path="/cursos"
+												element={
+													<PageTransition>
+														<CursosPage />
+													</PageTransition>
+												}
+											/>
+											<Route
+												path="/contacto"
+												element={
+													<PageTransition>
+														<ContactPage />
+													</PageTransition>
+												}
+											/>
+											<Route
+												path="/acerca-de"
+												element={
+													<PageTransition>
+														<About />
 													</PageTransition>
 												}
 											/>
