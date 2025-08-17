@@ -12,6 +12,7 @@ import {motion, AnimatePresence} from "framer-motion";
 import {AuthProvider} from "./contexts/AuthContext";
 import {CourseProvider} from "./contexts/CourseContext";
 import {ThemeProvider as CustomThemeProvider} from "./contexts/ThemeContext";
+import {SidebarProvider} from "./contexts/SidebarContext";
 import { ToastProvider } from "./components/ui";
 
 
@@ -53,6 +54,7 @@ import {USER_ROLES} from "./utils/constants";
 import theme from "./config/muiTheme";
 import ModernEditProfile from "./pages/EditProfile/ModernEditProfile";
 import ModernCourseRedirect from "./pages/student/CourseView/ModernCourseRedirect";
+import ErrorBoundary from "./components/ui/ErrorBoundary/ErrorBoundary";
 
 // Page Transition Component
 import PropTypes from "prop-types";
@@ -74,11 +76,31 @@ PageTransition.propTypes = {
 
 function App() {
 	return (
-		<ThemeProvider theme={theme}>
-			<CustomThemeProvider>
-				<ToastProvider>
-					<AuthProvider>
-						<CourseProvider>
+		<ErrorBoundary>
+			<ThemeProvider theme={theme}>
+				<CustomThemeProvider>
+					<ToastProvider>
+						<AuthProvider>
+							<SidebarProvider>
+							<ErrorBoundary
+								fallback={(error, errorInfo, reload) => (
+									<div className="p-8 text-center">
+										<h2 className="text-xl font-bold text-red-600 mb-4">
+											Error en el sistema de cursos
+										</h2>
+										<p className="text-gray-600 mb-4">
+											Ha ocurrido un problema al cargar los datos de los cursos.
+										</p>
+										<button
+											onClick={reload}
+											className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+										>
+											Reintentar
+										</button>
+									</div>
+								)}
+							>
+								<CourseProvider>
 							<VideoProvider>
 								<Router>
 									<AnimatePresence mode="wait">
@@ -355,11 +377,14 @@ function App() {
 									</AnimatePresence>
 								</Router>
 							</VideoProvider>
-						</CourseProvider>
+								</CourseProvider>
+							</ErrorBoundary>
+							</SidebarProvider>
 					</AuthProvider>
 				</ToastProvider>
 			</CustomThemeProvider>
 		</ThemeProvider>
+		</ErrorBoundary>
 	);
 }
 

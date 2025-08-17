@@ -127,7 +127,7 @@ export function hasValidData(key) {
 
 // Función para limpiar datos corruptos del localStorage
 export function clearCorruptedData() {
-	const keysToCheck = ["user", "expDates", "authToken"]; // Agregar más keys según sea necesario
+	const keysToCheck = ["user", "expDates", "authToken", "token"]; // Agregar más keys según sea necesario
 
 	keysToCheck.forEach((key) => {
 		try {
@@ -141,6 +141,52 @@ export function clearCorruptedData() {
 	});
 }
 
+// Función para limpiar completamente localStorage en caso de problemas graves
+export function clearAllEncryptedData() {
+	try {
+		console.warn("Clearing all encrypted data from localStorage");
+		const keysToRemove = [];
+		
+		// Recolectar todas las keys que podrían contener datos encriptados
+		for (let i = 0; i < localStorage.length; i++) {
+			const key = localStorage.key(i);
+			if (key && (key.includes('user') || key.includes('auth') || key.includes('token') || key.includes('exp'))) {
+				keysToRemove.push(key);
+			}
+		}
+		
+		// Remover las keys problemáticas
+		keysToRemove.forEach(key => {
+			localStorage.removeItem(key);
+			console.info(`Removed potentially corrupted key: ${key}`);
+		});
+		
+		// También limpiar cualquier dato que no sea JSON válido
+		const allKeys = Object.keys(localStorage);
+		allKeys.forEach(key => {
+			try {
+				const data = localStorage.getItem(key);
+				if (data && typeof data === 'string' && data.length > 10) {
+					// Intentar desencriptar para verificar si es válido
+					const decrypted = decryptData(data);
+					if (decrypted === null) {
+						console.info(`Removing corrupted encrypted key: ${key}`);
+						localStorage.removeItem(key);
+					}
+				}
+			} catch (error) {
+				console.info(`Removing invalid key: ${key}`);
+				localStorage.removeItem(key);
+			}
+		});
+		
+		return true;
+	} catch (error) {
+		console.error("Error clearing encrypted data:", error);
+		return false;
+	}
+}
+
 export default {
 	encryptData,
 	decryptData,
@@ -148,4 +194,5 @@ export default {
 	getFromLocalStorage,
 	hasValidData,
 	clearCorruptedData,
+	clearAllEncryptedData,
 };

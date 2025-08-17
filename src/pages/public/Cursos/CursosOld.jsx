@@ -10,128 +10,128 @@ const CursosPage = () => {
 	const [searchTerm, setSearchTerm] = useState("");
 
 	const categories = [
-		{id: "todos", name: "Todos los Cursos", count: 24},
-		{id: "tecnologia", name: "Tecnología", count: 8},
-		{id: "negocios", name: "Negocios Digitales", count: 6},
-		{id: "diseno", name: "Diseño & UX", count: 5},
-		{id: "marketing", name: "Marketing Digital", count: 5}
+		{id: "todos", name: "Todos los Cursos", count: 12},
+		{id: "ciberseguridad", name: "Ciberseguridad", count: 4},
+		{id: "cumplimiento", name: "Cumplimiento", count: 3},
+		{id: "atencion-cliente", name: "Atención al Cliente", count: 3},
+		{id: "liderazgo", name: "Liderazgo", count: 2}
 	];
 
 	const courses = [
 		{
 			id: 1,
-			title: "Desarrollo Web Full Stack con React y Node.js",
-			description: "Domina las tecnologías más demandadas para crear aplicaciones web modernas desde cero hasta producción.",
+			title: "Fundamentos de Ciberseguridad Empresarial",
+			description: "Aprende los conceptos básicos de seguridad informática aplicados al entorno cooperativo y financiero.",
 			image: "/curso1.webp",
 			progress: 0,
-			totalLessons: 45,
+			totalLessons: 8,
 			completedLessons: 0,
-			duration: "12 semanas",
-			difficulty: "Intermedio",
-			instructor: "Ana Rodríguez",
-			tags: ["JavaScript", "React", "Node.js"],
-			category: "tecnologia",
+			duration: "4 semanas",
+			difficulty: "Principiante",
+			instructor: "Carlos Mendoza",
+			tags: ["Seguridad", "Básico", "Obligatorio"],
+			category: "ciberseguridad",
 			isNew: true,
 			link: "/student/course/1"
 		},
 		{
 			id: 2,
-			title: "Inteligencia Artificial y Machine Learning",
-			description: "Aprende a implementar algoritmos de IA y ML para resolver problemas reales del mundo empresarial.",
+			title: "Gestión de Riesgos Operacionales",
+			description: "Identifica, evalúa y mitiga riesgos operacionales en el sector cooperativo de ahorro y crédito.",
 			image: "/curso4.png",
 			progress: 65,
-			totalLessons: 38,
-			completedLessons: 25,
-			duration: "10 semanas",
-			difficulty: "Avanzado",
-			instructor: "Dr. Carlos Mendoza",
-			tags: ["Python", "AI", "Machine Learning"],
-			category: "tecnologia"
+			totalLessons: 10,
+			completedLessons: 7,
+			duration: "6 semanas",
+			difficulty: "Intermedio",
+			instructor: "Ana Rodriguez",
+			tags: ["Riesgos", "Intermedio", "Certificación"],
+			category: "cumplimiento"
 		},
 		{
 			id: 3,
-			title: "E-commerce y Negocios Digitales",
-			description: "Crea y escala tu negocio online con estrategias probadas de comercio electrónico y marketing digital.",
+			title: "Protección de Datos Personales - LOPDP",
+			description: "Cumple con la normativa ecuatoriana de protección de datos personales en tu área de trabajo.",
 			image: "/curso5.jpeg",
 			progress: 30,
-			totalLessons: 28,
-			completedLessons: 8,
-			duration: "8 semanas",
+			totalLessons: 6,
+			completedLessons: 2,
+			duration: "3 semanas",
 			difficulty: "Intermedio",
-			instructor: "Laura García",
-			tags: ["E-commerce", "Marketing", "Emprendimiento"],
-			category: "negocios"
+			instructor: "Dr. Luis Paredes",
+			tags: ["Legal", "LOPDP", "Obligatorio"],
+			category: "cumplimiento"
 		},
 		{
 			id: 4,
-			title: "UX/UI Design con Figma",
-			description: "Diseña experiencias digitales excepcionales y crea interfaces atractivas con las herramientas más actuales.",
+			title: "Excelencia en Atención al Socio",
+			description: "Desarrolla habilidades avanzadas para brindar un servicio excepcional a nuestros socios.",
 			image: "/curso6.png",
 			progress: 0,
-			totalLessons: 32,
+			totalLessons: 12,
 			completedLessons: 0,
-			duration: "9 semanas",
-			difficulty: "Principiante",
-			instructor: "Sofía Martínez",
-			tags: ["Figma", "UX", "UI"],
-			category: "diseno",
+			duration: "5 semanas",
+			difficulty: "Intermedio",
+			instructor: "María González",
+			tags: ["Servicio", "Comunicación", "Obligatorio"],
+			category: "atencion-cliente",
 			isNew: true
 		},
 		{
 			id: 5,
-			title: "Marketing Digital y Redes Sociales",
-			description: "Domina las estrategias de marketing más efectivas para hacer crecer tu marca en el entorno digital.",
+			title: "Prevención de Lavado de Activos",
+			description: "Conoce las mejores prácticas para detectar y prevenir operaciones sospechosas de lavado de activos.",
 			image: "/c1Banner1.jpg",
 			progress: 85,
-			totalLessons: 25,
-			completedLessons: 21,
-			duration: "7 semanas",
-			difficulty: "Intermedio",
+			totalLessons: 8,
+			completedLessons: 7,
+			duration: "4 semanas",
+			difficulty: "Avanzado",
 			instructor: "Roberto Silva",
-			tags: ["Marketing", "Redes Sociales", "SEO"],
-			category: "marketing"
+			tags: ["Cumplimiento", "AML", "Obligatorio"],
+			category: "cumplimiento"
 		},
 		{
 			id: 6,
-			title: "Data Science con Python",
-			description: "Conviértete en un científico de datos y aprende a extraer insights valiosos de grandes volúmenes de información.",
+			title: "Liderazgo Cooperativo",
+			description: "Fortalece tus habilidades de liderazgo con enfoque en los valores y principios cooperativos.",
 			image: "/c2Banner1.jpg",
 			progress: 0,
-			totalLessons: 42,
+			totalLessons: 15,
 			completedLessons: 0,
-			duration: "11 semanas",
-			difficulty: "Intermedio",
-			instructor: "Dr. Carmen Vásquez",
-			tags: ["Python", "Data Science", "Análisis"],
-			category: "tecnologia"
+			duration: "8 semanas",
+			difficulty: "Avanzado",
+			instructor: "Ing. Carmen Vásquez",
+			tags: ["Liderazgo", "Valores", "Desarrollo"],
+			category: "liderazgo"
 		},
 		{
 			id: 7,
-			title: "Blockchain y Criptomonedas",
-			description: "Entiende la tecnología blockchain y el ecosistema de criptomonedas para aprovechar las oportunidades del futuro financiero.",
+			title: "Gestión de Crisis y Continuidad del Negocio",
+			description: "Aprende a manejar situaciones de crisis y asegurar la continuidad operacional de la cooperativa.",
 			image: "/c3Banner1.jpg",
 			progress: 45,
-			totalLessons: 20,
-			completedLessons: 9,
-			duration: "6 semanas",
+			totalLessons: 9,
+			completedLessons: 4,
+			duration: "5 semanas",
 			difficulty: "Avanzado",
 			instructor: "Dr. Fernando Morales",
-			tags: ["Blockchain", "Crypto", "Fintech"],
-			category: "tecnologia"
+			tags: ["Crisis", "Continuidad", "Estratégico"],
+			category: "liderazgo"
 		},
 		{
 			id: 8,
-			title: "Growth Hacking y Analytics",
-			description: "Acelera el crecimiento de tu negocio con técnicas avanzadas de growth hacking y análisis de datos.",
+			title: "Detección de Phishing y Ingeniería Social",
+			description: "Identifica y previene ataques de phishing y técnicas de ingeniería social en el entorno laboral.",
 			image: "/phishingCoop.jpg",
 			progress: 0,
-			totalLessons: 18,
+			totalLessons: 6,
 			completedLessons: 0,
-			duration: "5 semanas",
-			difficulty: "Avanzado",
-			instructor: "David Torres",
-			tags: ["Growth", "Analytics", "Conversión"],
-			category: "marketing",
+			duration: "3 semanas",
+			difficulty: "Principiante",
+			instructor: "Esp. David Torres",
+			tags: ["Phishing", "Seguridad", "Prevención"],
+			category: "ciberseguridad",
 			isNew: true
 		}
 	];
@@ -170,8 +170,8 @@ const CursosPage = () => {
 						transition={{duration: 0.8}}
 						className="text-4xl md:text-6xl font-bold text-white mb-6"
 					>
-						Cursos de{" "}
-						<span className="text-acent-500">Tecnología e Innovación</span>
+						Nuestros{" "}
+						<span className="text-acent-500">Programas de Capacitación</span>
 					</motion.h1>
 					
 					<motion.p
@@ -180,7 +180,7 @@ const CursosPage = () => {
 						transition={{duration: 0.8, delay: 0.2}}
 						className="text-xl text-white/90 mb-12 max-w-3xl mx-auto leading-relaxed"
 					>
-						Descubre cursos de alta calidad diseñados por expertos de la industria para impulsar tu carrera en tecnología, negocios digitales y marketing
+						Descubre nuestra amplia gama de cursos diseñados para fortalecer tus competencias profesionales y contribuir al éxito de VanguardIA
 					</motion.p>
 
 					{/* Search Bar */}
@@ -340,10 +340,10 @@ const CursosPage = () => {
 						viewport={{once: true}}
 					>
 						<h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">
-							¿Buscas algo específico?
+							¿No encuentras el curso que necesitas?
 						</h2>
 						<p className="text-xl text-gray-600 dark:text-gray-400 mb-8">
-							Sugerimos nuevos cursos mensualmente según las tendencias del mercado
+							Contáctanos para explorar opciones personalizadas de capacitación
 						</p>
 						<div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
 							<Button variant="primary" size="lg">

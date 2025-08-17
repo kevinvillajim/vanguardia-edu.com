@@ -4,13 +4,20 @@ import {useNavigate} from "react-router-dom";
 import {motion} from "motion/react";
 import cursos from "../../../utils/cursos";
 import LoadingSpinner from "../../../components/ui/Loading/LoadingSpinner";
+import {useCourseAccess} from "../../../hooks/useCourseAccess.jsx";
 
 const ModernCourseRedirect = ({curso}) => {
 	const navigate = useNavigate();
 	const [redirecting, setRedirecting] = useState(true);
 	const [progress, setProgress] = useState(0);
+	const {isLoading: checkingAccess, hasAccess} = useCourseAccess(curso);
 
 	useEffect(() => {
+		// Solo proceder si el check de acceso ha terminado y el usuario tiene acceso
+		if (checkingAccess || !hasAccess) {
+			return;
+		}
+
 		const handleRedirect = () => {
 			try {
 				// Simulate loading progress
@@ -57,7 +64,53 @@ const ModernCourseRedirect = ({curso}) => {
 		};
 
 		handleRedirect();
-	}, [curso, navigate]);
+	}, [curso, navigate, checkingAccess, hasAccess]);
+
+	// Mostrar loader mientras verifica acceso
+	if (checkingAccess) {
+		return (
+			<div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+				<motion.div
+					initial={{opacity: 0, y: 20}}
+					animate={{opacity: 1, y: 0}}
+					className="relative z-10 bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-xl text-center max-w-md border border-gray-200 dark:border-gray-700"
+				>
+					<motion.div
+						initial={{scale: 0}}
+						animate={{scale: 1}}
+						transition={{delay: 0.2, type: "spring", stiffness: 200}}
+						className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6"
+					>
+						<svg
+							className="w-8 h-8 text-white"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+							/>
+						</svg>
+					</motion.div>
+					<h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+						Verificando acceso
+					</h2>
+					<p className="text-gray-600 dark:text-gray-400 mb-6">
+						Comprobando permisos del curso...
+					</p>
+					<LoadingSpinner size="lg" color="blue" />
+				</motion.div>
+			</div>
+		);
+	}
+
+	// Si no tiene acceso, no renderizar nada (el hook maneja la redirección)
+	if (!hasAccess) {
+		return null;
+	}
 
 	if (!cursos[curso]) {
 		return (

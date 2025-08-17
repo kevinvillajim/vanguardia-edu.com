@@ -18,10 +18,10 @@ const ContactPage = () => {
 	const [submitted, setSubmitted] = useState(false);
 
 	const departments = [
-		{id: "capacitacion", name: "Área de Capacitación"},
-		{id: "rrhh", name: "Recursos Humanos"},
-		{id: "ti", name: "Tecnología"},
-		{id: "cumplimiento", name: "Cumplimiento"},
+		{id: "admisiones", name: "Admisiones y Matrículas"},
+		{id: "soporte", name: "Soporte Técnico"},
+		{id: "academico", name: "Soporte Académico"},
+		{id: "carreras", name: "Orientación Profesional"},
 		{id: "general", name: "Consulta General"}
 	];
 
@@ -34,8 +34,8 @@ const ContactPage = () => {
 			),
 			title: "Email",
 			description: "Escríbenos directamente",
-			contact: "capacitacion@cooprogreso.fin.ec",
-			action: "mailto:capacitacion@cooprogreso.fin.ec"
+			contact: "info@vanguardia.edu",
+			action: "mailto:info@vanguardia.edu"
 		},
 		{
 			icon: (
@@ -44,9 +44,9 @@ const ContactPage = () => {
 				</svg>
 			),
 			title: "Teléfono",
-			description: "Llámanos en horario laboral",
-			contact: "+593 2 398 8100",
-			action: "tel:+59323988100"
+			description: "Línea de atención al estudiante",
+			contact: "+593 2 500 4000",
+			action: "tel:+59325004000"
 		},
 		{
 			icon: (
@@ -55,9 +55,9 @@ const ContactPage = () => {
 					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
 				</svg>
 			),
-			title: "Ubicación",
-			description: "Visítanos en nuestras oficinas",
-			contact: "Av. Amazonas y República, Quito",
+			title: "Campus Virtual",
+			description: "Educación 100% online",
+			contact: "Acceso desde cualquier lugar",
 			action: "#"
 		},
 		{
@@ -66,29 +66,29 @@ const ContactPage = () => {
 					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
 				</svg>
 			),
-			title: "Horario de Atención",
-			description: "Estamos disponibles",
-			contact: "Lunes a Viernes: 8:00 - 17:00",
+			title: "Soporte 24/7",
+			description: "Asistencia disponible",
+			contact: "Chat en vivo las 24 horas",
 			action: "#"
 		}
 	];
 
 	const faqItems = [
 		{
-			question: "¿Cómo accedo a mis cursos asignados?",
-			answer: "Puedes acceder a tus cursos a través del portal interno usando tus credenciales corporativas. Si tienes problemas, contacta al área de TI."
+			question: "¿Cómo puedo inscribirme en un curso?",
+			answer: "Puedes inscribirte directamente desde nuestra plataforma. Solo necesitas crear una cuenta, seleccionar tu curso y proceder con el pago. Tendrás acceso inmediato al contenido."
 		},
 		{
-			question: "¿Puedo solicitar capacitación personalizada?",
-			answer: "Sí, ofrecemos programas de capacitación personalizados según las necesidades específicas de cada área. Contacta al equipo de capacitación para más información."
+			question: "¿Ofrecen certificaciones reconocidas internacionalmente?",
+			answer: "Sí, nuestros certificados tienen validez internacional y están respaldados por organismos acreditadores globales. Son reconocidos por empresas tech de todo el mundo."
 		},
 		{
-			question: "¿Los certificados tienen validez oficial?",
-			answer: "Todos nuestros certificados son válidos para el desarrollo profesional interno y algunos cuentan con acreditación externa reconocida."
+			question: "¿Puedo estudiar a mi propio ritmo?",
+			answer: "Absolutamente. Nuestros cursos están diseñados para el aprendizaje autodirigido. Tendrás acceso de por vida al contenido y podrás estudiar según tu horario."
 		},
 		{
-			question: "¿Qué hago si tengo problemas técnicos?",
-			answer: "Para problemas técnicos con la plataforma, puedes contactar directamente al área de TI o usar el formulario de contacto especificando el problema."
+			question: "¿Qué soporte técnico ofrecen?",
+			answer: "Ofrecemos soporte técnico 24/7 a través de chat en vivo, email y videollamadas. También tenemos una comunidad activa de estudiantes y mentores."
 		}
 	];
 
@@ -138,7 +138,7 @@ const ContactPage = () => {
 							¡Mensaje Enviado!
 						</h3>
 						<p className="text-gray-600 dark:text-gray-400 mb-6">
-							Hemos recibido tu mensaje. Nuestro equipo te contactará pronto.
+							Gracias por contactarnos. Un asesor académico se comunicará contigo dentro de las próximas 24 horas.
 						</p>
 						<Button variant="primary" onClick={() => setSubmitted(false)}>
 							Enviar Otro Mensaje
@@ -175,8 +175,8 @@ const ContactPage = () => {
 						transition={{duration: 0.8}}
 						className="text-4xl md:text-6xl font-bold text-white mb-6"
 					>
-						Estamos aquí para{" "}
-						<span className="text-acent-500">ayudarte</span>
+						Conectemos y construyamos{" "}
+						<span className="text-acent-500">el futuro juntos</span>
 					</motion.h1>
 					
 					<motion.p
@@ -185,7 +185,7 @@ const ContactPage = () => {
 						transition={{duration: 0.8, delay: 0.2}}
 						className="text-xl text-white/90 mb-12 max-w-3xl mx-auto leading-relaxed"
 					>
-						¿Tienes dudas sobre nuestros cursos? ¿Necesitas asistencia técnica? Nuestro equipo está listo para apoyarte en tu proceso de capacitación
+						¿Tienes preguntas sobre nuestra oferta educativa? ¿Necesitas orientación para elegir tu carrera tech? Estamos aquí para impulsar tu transformación digital
 					</motion.p>
 				</div>
 			</section>
@@ -200,10 +200,10 @@ const ContactPage = () => {
 						className="text-center mb-16"
 					>
 						<h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">
-							Múltiples formas de contactarnos
+							Conéctate con VanguardIA
 						</h2>
 						<p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
-							Elige el método que más te convenga para resolver tus dudas
+							Elige la forma que prefieras para comenzar tu journey tecnológico
 						</p>
 					</motion.div>
 
@@ -249,7 +249,7 @@ const ContactPage = () => {
 						>
 							<Card padding="lg">
 								<h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-									Envíanos un mensaje
+									¿Listo para transformar tu futuro?
 								</h3>
 								<form onSubmit={handleSubmit} className="space-y-6">
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -268,7 +268,7 @@ const ContactPage = () => {
 										</div>
 										<div>
 											<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-												Email corporativo *
+												Email *
 											</label>
 											<input
 												type="email"
@@ -284,7 +284,7 @@ const ContactPage = () => {
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 										<div>
 											<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-												Departamento *
+												Área de Interés *
 											</label>
 											<select
 												name="department"
@@ -344,7 +344,7 @@ const ContactPage = () => {
 											required
 											rows={5}
 											className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white resize-none"
-											placeholder="Describe tu consulta o problema en detalle..."
+											placeholder="Cuéntanos sobre tus objetivos profesionales y cómo podemos ayudarte..."
 										/>
 									</div>
 
@@ -386,10 +386,10 @@ const ContactPage = () => {
 
 							<Card variant="acent" padding="lg" className="mt-8">
 								<h4 className="font-bold text-acent-900 dark:text-acent-100 mb-2">
-									Consejo
+									💡 Tip VanguardIA
 								</h4>
 								<p className="text-gray-700 dark:text-gray-300">
-									Para una respuesta más rápida, incluye tu número de empleado y departamento en tu mensaje.
+									Para una orientación más personalizada, compártenos tu nivel de experiencia y objetivos profesionales.
 								</p>
 							</Card>
 						</motion.div>

@@ -21,6 +21,7 @@ const COURSE_ACTIONS = {
 	SET_EXP_DATES: "SET_EXP_DATES",
 	SET_COURSE_PROGRESS: "SET_COURSE_PROGRESS",
 	SET_OVERALL_PROGRESS: "SET_OVERALL_PROGRESS",
+	SET_INITIALIZED: "SET_INITIALIZED",
 	CLEAR_DATA: "CLEAR_DATA",
 };
 
@@ -153,6 +154,12 @@ function courseReducer(state, action) {
 				expDates: action.payload,
 			};
 
+		case COURSE_ACTIONS.SET_INITIALIZED:
+			return {
+				...state,
+				initialized: action.payload,
+			};
+
 		case COURSE_ACTIONS.SET_ERROR:
 			return {
 				...state,
@@ -181,8 +188,12 @@ export function CourseProvider({children}) {
 	// Cargar datos cuando el usuario esté autenticado
 	useEffect(() => {
 		if (isAuthenticated && user) {
-			loadInitialData();
+			console.log('CourseProvider: Loading initial data for user:', user.id);
+			loadInitialData().catch(err => {
+				console.error('CourseProvider: Failed to load initial data:', err);
+			});
 		} else {
+			console.log('CourseProvider: Clearing data (user not authenticated)');
 			dispatch({type: COURSE_ACTIONS.CLEAR_DATA});
 		}
 	}, [isAuthenticated, user]);
@@ -192,44 +203,56 @@ export function CourseProvider({children}) {
 		try {
 			dispatch({type: COURSE_ACTIONS.SET_LOADING, payload: true});
 
-			// Cargar datos en paralelo
-			const [coursesData, progressData, expDatesData] = await Promise.all([
+			// Cargar datos en paralelo con fallbacks
+			const [coursesData, progressData, expDatesData] = await Promise.allSettled([
 				courseService.getCourses(),
 				courseService.getUserProgress(),
 				courseService.getExpDates(),
 			]);
 
-			dispatch({type: COURSE_ACTIONS.SET_COURSES, payload: coursesData});
-			dispatch({type: COURSE_ACTIONS.SET_EXP_DATES, payload: expDatesData});
-			dispatch({type: COURSE_ACTIONS.SET_PROGRESS, payload: progressData});
+			// Extraer datos con fallbacks seguros
+			const courses = coursesData.status === 'fulfilled' ? coursesData.value : [];
+			const progress = progressData.status === 'fulfilled' ? progressData.value : [];
+			const expDates = expDatesData.status === 'fulfilled' ? expDatesData.value : [];
 
-			// Calcular progreso por curso
+			dispatch({type: COURSE_ACTIONS.SET_COURSES, payload: courses});
+			dispatch({type: COURSE_ACTIONS.SET_EXP_DATES, payload: expDates});
+			dispatch({type: COURSE_ACTIONS.SET_PROGRESS, payload: progress});
+
+			// Calcular progreso por curso con datos seguros
 			const courseProgressData = {};
-			coursesData.forEach((course) => {
-				courseProgressData[course.id] = calculateCourseProgress(
-					course,
-					progressData
-				);
-			});
+			if (Array.isArray(courses)) {
+				courses.forEach((course) => {
+					if (course && course.id) {
+						courseProgressData[course.id] = calculateCourseProgress(
+							course,
+							progress || []
+						);
+					}
+				});
+			}
 			dispatch({
 				type: COURSE_ACTIONS.SET_COURSE_PROGRESS,
 				payload: courseProgressData,
 			});
 
-			// Calcular progreso general
+			// Calcular progreso general con datos seguros
 			const overallProgress = calculateOverallProgress(
-				coursesData,
-				progressData
+				courses || [],
+				progress || []
 			);
 			dispatch({
 				type: COURSE_ACTIONS.SET_OVERALL_PROGRESS,
 				payload: overallProgress,
 			});
 
-			// Sincronizar con localStorage
-			courseService.syncProgressWithLocalStorage(progressData);
+			// Sincronizar con localStorage solo si hay datos
+			if (Array.isArray(progress) && progress.length > 0) {
+				courseService.syncProgressWithLocalStorage(progress);
+			}
 
-			state.initialized = true;
+			// Marcar como inicializado
+			dispatch({type: COURSE_ACTIONS.SET_INITIALIZED, payload: true});
 		} catch (error) {
 			console.error("Error loading initial course data:", error);
 			dispatch({
@@ -395,6 +418,20 @@ export function CourseProvider({children}) {
 		completedCoursesCount: state.overallProgress.completedCourses,
 		averageProgressPercent: state.overallProgress.averageProgress,
 	};
+
+	// Mostrar loading si está cargando y no ha inicializado
+	if (state.isLoading && !state.initialized) {
+		return (
+			<CourseContext.Provider value={value}>
+				<div className="min-h-screen flex items-center justify-center">
+					<div className="text-center">
+						<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+						<p className="mt-4 text-gray-600">Cargando cursos...</p>
+					</div>
+				</div>
+			</CourseContext.Provider>
+		);
+	}
 
 	return (
 		<CourseContext.Provider value={value}>{children}</CourseContext.Provider>

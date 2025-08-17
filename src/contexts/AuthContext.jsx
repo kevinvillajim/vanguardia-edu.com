@@ -78,6 +78,9 @@ function authReducer(state, action) {
 			return {
 				...state,
 				user: {...state.user, ...action.payload},
+				passwordChangeRequired: action.payload.passwordChangeRequired !== undefined 
+					? action.payload.passwordChangeRequired 
+					: state.passwordChangeRequired,
 				lastActivity: Date.now(),
 			};
 

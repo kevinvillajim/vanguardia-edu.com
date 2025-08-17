@@ -4,7 +4,7 @@ import {APP_CONFIG} from "../../utils/constants";
 
 // Crear instancia de axios
 const apiClient = axios.create({
-	baseURL: APP_CONFIG.API_BASE_URL,
+	baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000/api",
 	timeout: 10000,
 	headers: {
 		"Content-Type": "application/json",

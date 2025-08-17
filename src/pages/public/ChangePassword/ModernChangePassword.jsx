@@ -2,9 +2,10 @@
 import {useState} from "react";
 import {motion, AnimatePresence} from "motion/react";
 import {useNavigate} from "react-router-dom";
-import api from "../../../config/api";
+import {useAuth} from "../../../contexts/AuthContext";
 import {Button, Input, Card} from "../../../components/ui";
 import {validationRules} from "../../../utils/validation";
+import {USER_ROLES} from "../../../utils/constants";
 
 const ModernChangePassword = () => {
 	const [formData, setFormData] = useState({
@@ -18,6 +19,7 @@ const ModernChangePassword = () => {
 		confirm: false,
 	});
 	const navigate = useNavigate();
+	const {changePassword, user, updateUser} = useAuth();
 
 	const validateForm = () => {
 		const newErrors = {};
@@ -63,13 +65,24 @@ const ModernChangePassword = () => {
 		setLoading(true);
 
 		try {
-			await api.post("/auth/change-password", {
-				password: formData.newPassword,
-				confirmation: formData.confirmPassword,
-			});
-
-			// Success animation and redirect
-			navigate("/estudiante/dashboard");
+			// Usar el contexto de autenticación para cambiar la contraseña
+			const result = await changePassword(formData.newPassword, formData.confirmPassword);
+			
+			if (result.success) {
+				// Actualizar el usuario en el contexto para marcar que ya cambió la contraseña
+				const updatedUser = {
+					...user,
+					password_changed: 1
+				};
+				updateUser(updatedUser);
+				
+				// Redirigir según el rol del usuario
+				const dashboardPath = user.role === USER_ROLES.ADMIN 
+					? "/admin/dashboard" 
+					: "/estudiante/dashboard";
+				
+				navigate(dashboardPath);
+			}
 		} catch (error) {
 			setErrors({
 				submit:

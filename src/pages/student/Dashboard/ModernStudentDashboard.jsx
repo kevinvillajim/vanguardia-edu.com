@@ -12,20 +12,31 @@ import {
 } from "../../../components/ui";
 import cursos from "../../../utils/cursos";
 import {getFromLocalStorage} from "../../../utils/crypto";
+import {useAuth} from "../../../hooks/useAuth";
 
 const ModernStudentDashboard = () => {
-	const [user, setUser] = useState(null);
+	const {user: authUser, isAuthenticated} = useAuth();
 	const [expDates, setExpDates] = useState([]);
 	const [recentActivity, setRecentActivity] = useState([]);
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
-		try {
-			// Remover JSON.parse - getFromLocalStorage ya retorna datos deserializados
-			const userData = getFromLocalStorage("user");
-			const expDatesData = getFromLocalStorage("expDates") || [];
+		if (!isAuthenticated || !authUser) {
+			setLoading(false);
+			return;
+		}
 
-			setUser(userData);
+		try {
+			// Intentar obtener datos de localStorage con manejo de errores
+			let expDatesData = [];
+			
+			try {
+				expDatesData = getFromLocalStorage("expDates") || [];
+			} catch (error) {
+				console.warn("Error getting expDates from localStorage:", error);
+				expDatesData = [];
+			}
+
 			setExpDates(expDatesData);
 
 			// Generate recent activity (this would come from API in real app)
@@ -52,13 +63,12 @@ const ModernStudentDashboard = () => {
 		} catch (error) {
 			console.error("Error loading dashboard data:", error);
 			// En caso de error, mantener valores por defecto
-			setUser(null);
 			setExpDates([]);
 			setRecentActivity([]);
 		} finally {
 			setLoading(false);
 		}
-	}, []);
+	}, [isAuthenticated, authUser]);
 
 	const isCourseAvailable = (cursoId) => {
 		const expDate = expDates.find(
@@ -224,7 +234,7 @@ const ModernStudentDashboard = () => {
 		.filter((stat) => stat.progress === 0 && stat.isAvailable)
 		.slice(0, 2);
 
-	if (loading || !user) {
+	if (loading || !authUser) {
 		return (
 			<div className="w-screen h-screen flex justify-center items-center">
 				<div className="loader-4">
@@ -255,7 +265,7 @@ const ModernStudentDashboard = () => {
 
 					<div className="relative z-10">
 						<h2 className="text-2xl font-bold mb-2">
-							¡Hola, {user?.name || "Estudiante"}! 👋
+							¡Hola, {authUser?.name || "Estudiante"}! 👋
 						</h2>
 						<p className="text-purple-100 mb-4">
 							Continúa tu aprendizaje donde lo dejaste y alcanza tus objetivos
@@ -463,6 +473,10 @@ const ModernStudentDashboard = () => {
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 						{cursos.map((curso, index) => {
 							const courseStat = courseStats[index];
+							// Solo mostrar cursos disponibles (no expirados)
+							if (!courseStat.isAvailable) {
+								return null;
+							}
 							return (
 								<motion.div
 									key={index}
@@ -486,7 +500,7 @@ const ModernStudentDashboard = () => {
 											"Ciberseguridad",
 										]}
 										link={curso.link}
-										isLocked={!courseStat.isAvailable}
+										isLocked={false}
 										isNew={index === 0}
 									/>
 								</motion.div>

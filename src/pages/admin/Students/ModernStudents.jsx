@@ -44,7 +44,7 @@ const ModernStudents = () => {
 			const allUsers = studentsResponse.data;
 			const progressData = progressResponse.data;
 
-			const studentsOnly = allUsers.filter((user) => user.role !== "1");
+			const studentsOnly = allUsers.filter((user) => parseInt(user.role) !== 1);
 
 			const studentsWithProgress = studentsOnly.map((student) => {
 				const {completed, inProgress, courseDetails} = calculateProgress(
@@ -74,12 +74,15 @@ const ModernStudents = () => {
 		switch (filterType) {
 			case "completed":
 				filtered = students.filter(
-					(student) => student.coursesCompleted === cursos.length
+					(student) => parseInt(student.coursesCompleted) === cursos.length
 				);
 				break;
 			case "inProgress":
 				filtered = students.filter(
-					(student) => student.coursesCompleted < cursos.length
+					(student) => {
+						const completed = parseInt(student.coursesCompleted);
+						return completed > 0 && completed < cursos.length;
+					}
 				);
 				break;
 			default:
@@ -344,7 +347,7 @@ const ModernStudents = () => {
 		},
 		{
 			title: "Cursos Completados",
-			value: students.filter((s) => s.coursesCompleted === cursos.length)
+			value: students.filter((s) => parseInt(s.coursesCompleted) === cursos.length)
 				.length,
 			icon: (
 				<svg
@@ -366,7 +369,10 @@ const ModernStudents = () => {
 		{
 			title: "En Progreso",
 			value: students.filter(
-				(s) => s.coursesCompleted > 0 && s.coursesCompleted < cursos.length
+				(s) => {
+					const completed = parseInt(s.coursesCompleted);
+					return completed > 0 && completed < cursos.length;
+				}
 			).length,
 			icon: (
 				<svg
@@ -387,7 +393,7 @@ const ModernStudents = () => {
 		},
 		{
 			title: "Sin Comenzar",
-			value: students.filter((s) => s.coursesCompleted === 0).length,
+			value: students.filter((s) => parseInt(s.coursesCompleted) === 0).length,
 			icon: (
 				<svg
 					className="w-6 h-6"
@@ -513,7 +519,7 @@ const ModernStudents = () => {
 							>
 								Completados (
 								{
-									students.filter((s) => s.coursesCompleted === cursos.length)
+									students.filter((s) => parseInt(s.coursesCompleted) === cursos.length)
 										.length
 								}
 								)
@@ -526,9 +532,10 @@ const ModernStudents = () => {
 								En Progreso (
 								{
 									students.filter(
-										(s) =>
-											s.coursesCompleted > 0 &&
-											s.coursesCompleted < cursos.length
+										(s) => {
+											const completed = parseInt(s.coursesCompleted);
+											return completed > 0 && completed < cursos.length;
+										}
 									).length
 								}
 								)

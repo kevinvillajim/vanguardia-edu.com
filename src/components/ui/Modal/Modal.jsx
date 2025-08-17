@@ -103,7 +103,7 @@ const Modal = ({
 Modal.propTypes = {
 	isOpen: PropTypes.bool.isRequired,
 	onClose: PropTypes.func.isRequired,
-	children: PropTypes.node.isRequired,
+	children: PropTypes.node,
 	title: PropTypes.string,
 	size: PropTypes.oneOf(["sm", "md", "lg", "xl", "full"]),
 	closeOnBackdrop: PropTypes.bool,

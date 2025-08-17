@@ -220,6 +220,7 @@ const ModernUsers = () => {
 			key: "role",
 			title: "Rol",
 			render: (value) => {
+				const numericRole = parseInt(value);
 				const roleConfig = {
 					1: {
 						label: "Administrador",
@@ -238,7 +239,7 @@ const ModernUsers = () => {
 					},
 				};
 
-				const config = roleConfig[value] || {
+				const config = roleConfig[numericRole] || {
 					label: "Sin rol",
 					color:
 						"bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
@@ -273,7 +274,7 @@ const ModernUsers = () => {
 			title: "Acciones",
 			sortable: false,
 			render: (_, row) => {
-				if (row.role === "1") return null; // No mostrar acciones para admin
+				if (parseInt(row.role) === 1) return null; // No mostrar acciones para admin
 
 				return (
 					<div className="flex items-center space-x-2">
@@ -411,7 +412,7 @@ const ModernUsers = () => {
 					selectable={true}
 					actions={tableActions}
 					onRowClick={(user) => {
-						if (user.role !== "1") {
+						if (parseInt(user.role) !== 1) {
 							openEditModal(user);
 						}
 					}}
@@ -435,10 +436,10 @@ const ModernUsers = () => {
 					/>
 				</svg>
 			),
-			badge: users.filter((u) => u.role === "1").length,
+			badge: users.filter((u) => parseInt(u.role) === 1).length,
 			content: (
 				<Table
-					data={users.filter((u) => u.role === "1")}
+					data={users.filter((u) => parseInt(u.role) === 1)}
 					columns={columns.filter((c) => c.key !== "actions")}
 					loading={loading}
 					searchable={true}
@@ -463,10 +464,10 @@ const ModernUsers = () => {
 					/>
 				</svg>
 			),
-			badge: users.filter((u) => u.role === "2").length,
+			badge: users.filter((u) => parseInt(u.role) === 2).length,
 			content: (
 				<Table
-					data={users.filter((u) => u.role === "2")}
+					data={users.filter((u) => parseInt(u.role) === 2)}
 					columns={columns}
 					loading={loading}
 					searchable={true}
@@ -553,12 +554,12 @@ const ModernUsers = () => {
 						},
 						{
 							label: "Estudiantes",
-							value: users.filter((u) => u.role === "2").length,
+							value: users.filter((u) => parseInt(u.role) === 2).length,
 							color: "purple",
 						},
 						{
 							label: "Administradores",
-							value: users.filter((u) => u.role === "1").length,
+							value: users.filter((u) => parseInt(u.role) === 1).length,
 							color: "orange",
 						},
 					].map((stat, index) => (
@@ -732,8 +733,8 @@ const ModernUsers = () => {
 								<div className="space-y-1 text-sm text-blue-800 dark:text-blue-300">
 									<p><strong>ID:</strong> #{selectedUser.id}</p>
 									<p><strong>Rol:</strong> {
-										selectedUser.role === "1" ? "Administrador" : 
-										selectedUser.role === "2" ? "Estudiante" : "Instructor"
+										parseInt(selectedUser.role) === 1 ? "Administrador" : 
+										parseInt(selectedUser.role) === 2 ? "Estudiante" : "Instructor"
 									}</p>
 									<p><strong>Teléfono:</strong> {selectedUser.phone || "No registrado"}</p>
 								</div>

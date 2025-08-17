@@ -10,8 +10,8 @@ function About() {
 					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
 				</svg>
 			),
-			title: "Certificación Internacional",
-			description: "Programas acreditados internacionalmente que validan tus competencias en el mercado global."
+			title: "Certificación Profesional",
+			description: "Programas acreditados que impulsan tu desarrollo profesional y crecimiento dentro de la cooperativa."
 		},
 		{
 			icon: (
@@ -19,8 +19,8 @@ function About() {
 					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C20.832 18.477 19.246 18 17.5 18c-1.746 0-3.332.477-4.5 1.253" />
 				</svg>
 			),
-			title: "IA y Personalización",
-			description: "Utilizamos inteligencia artificial para personalizar tu experiencia de aprendizaje según tu ritmo y estilo."
+			title: "Metodología Innovadora",
+			description: "Combinamos teoría y práctica con tecnología de vanguardia para una experiencia de aprendizaje óptima."
 		},
 		{
 			icon: (
@@ -28,16 +28,16 @@ function About() {
 					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
 				</svg>
 			),
-			title: "Red Global de Talentos",
-			description: "Conéctate con profesionales de todo el mundo y construye tu red de contactos en la industria tech."
+			title: "Comunidad de Aprendizaje",
+			description: "Forma parte de una red de profesionales comprometidos con la excelencia y el crecimiento mutuo."
 		}
 	];
 
 	const stats = [
-		{label: "Estudiantes Globales", value: "25,000+"},
-		{label: "Cursos Especializados", value: "150+"},
-		{label: "Horas de Contenido", value: "5,000+"},
-		{label: "Tasa de Éxito", value: "96%"}
+		{label: "Colaboradores Capacitados", value: "450+"},
+		{label: "Programas Disponibles", value: "15+"},
+		{label: "Horas de Formación", value: "2,000+"},
+		{label: "Índice de Satisfacción", value: "98%"}
 	];
 
 	return (
@@ -68,11 +68,11 @@ function About() {
 							transition={{duration: 0.8}}
 						>
 							<h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
-								El futuro es{" "}
-								<span className="text-acent-500">tecnológico</span>
+								Tu desarrollo es{" "}
+								<span className="text-acent-500">nuestro éxito</span>
 							</h1>
 							<p className="text-xl text-white/90 mb-8 leading-relaxed">
-								En VanguardIA transformamos la educación con tecnología de vanguardia. Nuestra plataforma utiliza IA, realidad virtual y metodologías innovadoras para crear la experiencia de aprendizaje más efectiva del mercado.
+								En VanguardIA, creemos que el crecimiento profesional de nuestro equipo es fundamental para brindar un servicio excepcional. Nuestra plataforma educativa está diseñada para potenciar tus habilidades y conocimientos.
 							</p>
 							<Button variant="acent" size="lg" className="text-lg px-8 py-4">
 								Explora Nuestros Programas
@@ -135,10 +135,10 @@ function About() {
 						className="text-center mb-16"
 					>
 						<h2 className="text-3xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
-							¿Por qué somos líderes en EdTech?
+							¿Por qué elegir nuestra plataforma?
 						</h2>
 						<p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
-							Innovamos constantemente para ofrecer la experiencia educativa más avanzada y efectiva del mercado
+							Ofrecemos una experiencia educativa integral diseñada especialmente para el éxito de nuestro equipo VanguardIA
 						</p>
 					</motion.div>
 
@@ -182,10 +182,10 @@ function About() {
 						>
 							<Card variant="primary" padding="lg">
 								<h3 className="text-2xl font-bold text-primary-900 dark:text-primary-100 mb-4">
-									Nuestra Visión Tecnológica
+									Nuestra Misión
 								</h3>
 								<p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-									Democratizar el acceso a educación tecnológica de clase mundial, empoderando a profesionales de todo el mundo para que lideren la transformación digital en sus industrias.
+									Brindar formación integral y especializada a nuestro equipo humano, fortaleciendo sus competencias profesionales y promoviendo una cultura de aprendizaje continuo que se traduzca en un servicio de excelencia para nuestros socios.
 								</p>
 							</Card>
 						</motion.div>
@@ -198,10 +198,10 @@ function About() {
 						>
 							<Card variant="acent" padding="lg">
 								<h3 className="text-2xl font-bold text-acent-900 dark:text-acent-100 mb-4">
-									Nuestro Impacto Global
+									Nuestra Visión
 								</h3>
 								<p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-									Ser la plataforma educativa más innovadora y efectiva a nivel global, formando a la próxima generación de líderes tecnológicos que transformarán el mundo.
+									Ser reconocidos como la cooperativa líder en desarrollo de talento humano del sector financiero, con un equipo altamente capacitado que inspire confianza y genere valor agregado en cada interacción con nuestros socios.
 								</p>
 							</Card>
 						</motion.div>
@@ -219,10 +219,10 @@ function About() {
 						viewport={{once: true}}
 					>
 						<h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-							¿Listo para liderar el futuro?
+							¿Listo para impulsar tu carrera?
 						</h2>
 						<p className="text-xl text-white/90 mb-8">
-							Únete a más de 25,000 profesionales que ya están construyendo el futuro tecnológico
+							Únete a más de 450 colaboradores que ya están transformando su futuro profesional
 						</p>
 						<div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
 							<Button variant="acent" size="lg" className="text-lg px-8 py-4">

@@ -24,7 +24,7 @@ const ModernCourseCard = ({
 		if (progress >= 75) return "blue";
 		if (progress >= 50) return "purple";
 		if (progress >= 25) return "orange";
-		return "gray";
+		return "red";
 	};
 
 	const getDifficultyColor = (diff) => {

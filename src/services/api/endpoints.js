@@ -6,19 +6,15 @@
  */
 
 // Base URL para construcción de endpoints
-const getBaseUrl = () =>
-	import("../../utils/constants").then(
-		(module) => module.APP_CONFIG.API_BASE_URL
-	);
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
 // Helper
-const buildUrl = async (endpoint, params = {}) => {
+const buildUrl = (endpoint, params = {}) => {
 	let url = endpoint;
 	Object.keys(params).forEach((key) => {
 		url = url.replace(`{${key}}`, params[key]);
 	});
-	const baseUrl = await getBaseUrl();
-	return baseUrl + url;
+	return BASE_URL + url;
 };
 
 // ============================================================================

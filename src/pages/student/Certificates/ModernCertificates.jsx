@@ -33,42 +33,79 @@ const ModernCertificates = () => {
 		}
 	}, []);
 
-	const searchIsFinished = async (userId, courseIndex) => {
-		try {
-			const response = await api.get(`/progress/student/${userId}`);
-			const progressById = response.data;
-			const isFinished = progressById.filter(
-				(item) => item.course_id === String(courseIndex)
-			);
-
-			return (
-				isFinished.length === cursos[courseIndex].units.length &&
-				isFinished.every((item) => item.completed === "1")
-			);
-		} catch (error) {
-			console.error("Error fetching progress data:", error);
-			return false;
-		}
-	};
-
 	const checkCoursesCompletion = async (userId) => {
 		setLoading(true);
 		const finished = [];
 
-		for (let i = 0; i < cursos.length; i++) {
-			const isFinished = await searchIsFinished(userId, i);
-			if (isFinished) {
-				finished.push({
-					courseIndex: i,
-					course: cursos[i],
-					completedDate: new Date().toISOString().split("T")[0], // This would come from API
-					score: Math.floor(Math.random() * 20) + 80, // This would come from API
-				});
-			}
-		}
+		try {
+			// Una sola consulta para obtener todo el progreso del usuario
+			const response = await api.get(`/progress/student/${userId}`);
+			const allProgress = response.data;
 
-		setFinishedCourses(finished);
-		setLoading(false);
+			console.log("All user progress:", allProgress);
+
+			// Agrupar progreso por curso
+			const progressByCourse = {};
+			allProgress.forEach(item => {
+				const courseId = parseInt(item.course_id);
+				if (!progressByCourse[courseId]) {
+					progressByCourse[courseId] = [];
+				}
+				progressByCourse[courseId].push(item);
+			});
+
+			// Verificar cada curso
+			for (let courseIndex = 0; courseIndex < cursos.length; courseIndex++) {
+				const courseProgress = progressByCourse[courseIndex] || [];
+				const expectedUnits = cursos[courseIndex].units.length;
+
+				console.log(`Course ${courseIndex}:`, {
+					expectedUnits,
+					foundUnits: courseProgress.length,
+					progress: courseProgress
+				});
+
+				// Verificar si el curso está completado
+				const courseCompleted = (
+					courseProgress.length === expectedUnits &&
+					courseProgress.every((item) => parseInt(item.completed) === 1) &&
+					courseProgress.every((item) => parseInt(item.certificate) === 1)
+				);
+
+				if (courseCompleted) {
+					// Calcular score real del promedio de todas las unidades
+					const averageScore = courseProgress.reduce((sum, item) => 
+						sum + parseFloat(item.score || 0), 0
+					) / courseProgress.length;
+
+					// Obtener fecha de finalización más reciente
+					const finishDates = courseProgress
+						.filter(item => item.finishDate)
+						.map(item => new Date(item.finishDate))
+						.sort((a, b) => b - a);
+					
+					const completedDate = finishDates.length > 0 
+						? finishDates[0].toISOString().split("T")[0]
+						: new Date().toISOString().split("T")[0];
+
+					finished.push({
+						courseIndex,
+						course: cursos[courseIndex],
+						completedDate,
+						score: Math.round(averageScore),
+					});
+
+					console.log(`Course ${courseIndex} completed with score:`, Math.round(averageScore));
+				}
+			}
+
+			setFinishedCourses(finished);
+		} catch (error) {
+			console.error("Error fetching progress data:", error);
+			setFinishedCourses([]);
+		} finally {
+			setLoading(false);
+		}
 	};
 
 	const handleDownloadCertificate = (courseIndex) => {
@@ -148,7 +185,7 @@ const ModernCertificates = () => {
 					/>
 				</svg>
 			),
-			color: "yellow",
+			color: "orange",
 		},
 		{
 			title: "Certificados Este Mes",

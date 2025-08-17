@@ -2,20 +2,33 @@
 import {useState} from "react";
 import {motion, AnimatePresence} from "motion/react";
 import {useTheme} from "../../../contexts/ThemeContext";
+import {useSidebar} from "../../../contexts/SidebarContext";
 import ThemeToggle from "../../ui/ThemeToggle";
 import {getFromLocalStorage} from "../../../utils/crypto";
 import {sideBarOptions} from "../../../utils/menuData";
 import PropTypes from "prop-types";
 
 const ModernTemplate = ({children, rol, title}) => {
-	const [sidebarOpen, setSidebarOpen] = useState(true);
+	const {sidebarOpen, toggleSidebar, isMobile, handleNavigation} = useSidebar();
 	const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 	useTheme();
 	const user = JSON.parse(getFromLocalStorage("user"));
 
 	const sidebarVariants = {
-		open: {width: "280px", opacity: 1},
-		closed: {width: "80px", opacity: 0.9},
+		open: {
+			width: "280px", 
+			opacity: 1,
+			x: 0
+		},
+		closed: isMobile ? {
+			width: "280px", 
+			opacity: 1,
+			x: "-100%"
+		} : {
+			width: "80px", 
+			opacity: 0.9,
+			x: 0
+		},
 	};
 
 	const handleLogout = () => {
@@ -33,11 +46,13 @@ const ModernTemplate = ({children, rol, title}) => {
 		<div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
 			{/* Sidebar */}
 			<motion.aside
-				initial="open"
+				initial={isMobile ? "closed" : "open"}
 				animate={sidebarOpen ? "open" : "closed"}
 				variants={sidebarVariants}
 				transition={{duration: 0.3, ease: "easeInOut"}}
-				className="fixed left-0 top-0 h-full bg-white dark:bg-gray-800 shadow-xl z-40 border-r border-gray-200 dark:border-gray-700"
+				className={`fixed left-0 top-0 h-full bg-white dark:bg-gray-800 shadow-xl border-r border-gray-200 dark:border-gray-700 ${
+					isMobile ? 'z-50' : 'z-40'
+				}`}
 			>
 				<div className="flex flex-col h-full">
 					{/* Logo Section */}
@@ -116,6 +131,7 @@ const ModernTemplate = ({children, rol, title}) => {
 								initial={{opacity: 0, x: -20}}
 								animate={{opacity: 1, x: 0}}
 								transition={{delay: index * 0.1}}
+								onClick={handleNavigation}
 								className="flex items-center space-x-3 p-3 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 group"
 							>
 								<div className="w-6 h-6 flex items-center justify-center">
@@ -142,12 +158,12 @@ const ModernTemplate = ({children, rol, title}) => {
 
 					{/* Bottom Actions */}
 					<div className="p-4 border-t border-gray-200 dark:border-gray-700">
-						<div className="flex items-center justify-between">
+						<div className={`flex ${sidebarOpen ? "" : "flex-col"} items-center justify-between`}>
 							<ThemeToggle />
 							<motion.button
 								whileHover={{scale: 1.05}}
 								whileTap={{scale: 0.95}}
-								onClick={() => setSidebarOpen(!sidebarOpen)}
+								onClick={toggleSidebar}
 								className="p-2 rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
 							>
 								<svg
@@ -172,13 +188,40 @@ const ModernTemplate = ({children, rol, title}) => {
 			{/* Main Content */}
 			<div
 				className={`transition-all duration-300 ${
-					sidebarOpen ? "ml-[280px]" : "ml-[80px]"
+					isMobile 
+						? "ml-0" 
+						: sidebarOpen 
+							? "ml-[280px]" 
+							: "ml-[80px]"
 				}`}
 			>
 				{/* Header */}
 				<header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30">
 					<div className="flex items-center justify-between h-16 px-6">
 						<div className="flex items-center space-x-4">
+							{/* Mobile Menu Button */}
+							<motion.button
+								whileHover={{scale: 1.05}}
+								whileTap={{scale: 0.95}}
+								onClick={toggleSidebar}
+								className={`p-2 rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
+									isMobile ? 'block' : 'hidden'
+								}`}
+							>
+								<svg
+									className="w-6 h-6"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d={sidebarOpen && isMobile ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
+									/>
+								</svg>
+							</motion.button>
 							<motion.h1
 								initial={{opacity: 0, y: -20}}
 								animate={{opacity: 1, y: 0}}
@@ -318,12 +361,18 @@ const ModernTemplate = ({children, rol, title}) => {
 			</div>
 
 			{/* Mobile Overlay */}
-			{sidebarOpen && (
-				<div
-					className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
-					onClick={() => setSidebarOpen(false)}
-				/>
-			)}
+			<AnimatePresence>
+				{sidebarOpen && isMobile && (
+					<motion.div
+						initial={{opacity: 0}}
+						animate={{opacity: 1}}
+						exit={{opacity: 0}}
+						transition={{duration: 0.2}}
+						className="fixed inset-0 bg-black bg-opacity-50 z-40"
+						onClick={toggleSidebar}
+					/>
+				)}
+			</AnimatePresence>
 		</div>
 	);
 };

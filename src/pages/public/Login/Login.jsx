@@ -130,9 +130,9 @@ const ModernLogin = () => {
 					/>
 				</svg>
 			),
-			title: "Programas Especializados",
+			title: "Cursos Tech de Vanguardia",
 			description:
-				"Descubre capacitaciones diseñadas para impulsar tu crecimiento profesional en VanguardIA.",
+				"Accede a programas educativos en tecnología, desarrollo web, IA y marketing digital.",
 		},
 		{
 			icon: (
@@ -150,9 +150,9 @@ const ModernLogin = () => {
 					/>
 				</svg>
 			),
-			title: "Reconocimiento Profesional",
+			title: "Certificaciones Globales",
 			description:
-				"Obtén certificados que validan tu dedicación y logros en tu desarrollo profesional.",
+				"Obtén certificados reconocidos internacionalmente que validan tus habilidades tech.",
 		},
 		{
 			icon: (
@@ -170,8 +170,8 @@ const ModernLogin = () => {
 					/>
 				</svg>
 			),
-			title: "Flexibilidad Total",
-			description: "Avanza a tu ritmo y desarrolla nuevas competencias que potencien tu carrera.",
+			title: "Aprendizaje Flexible",
+			description: "Estudia a tu ritmo, 24/7, y construye las habilidades que demanda el mercado tech.",
 		},
 	];
 
@@ -226,15 +226,15 @@ const ModernLogin = () => {
 						</div>
 
 						<h2 className="text-4xl font-bold mb-6 leading-tight">
-							Tu centro de desarrollo en
+							Tu futuro tecnológico comienza en
 							<span className="block bg-gradient-to-r from-acent-500 to-green-300 bg-clip-text text-transparent">
 								VanguardIA
 							</span>
 						</h2>
 
 						<p className="text-xl text-primary-100 mb-12 leading-relaxed">
-							Explora oportunidades de crecimiento profesional diseñadas especialmente 
-							para ti. Accede a programas que impulsan tu carrera en nuestra cooperativa.
+							Únete a miles de profesionales que han transformado sus carreras con nuestros 
+							cursos especializados en tecnología e innovación digital.
 						</p>
 
 						{/* Features */}
@@ -289,10 +289,10 @@ const ModernLogin = () => {
 					<div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-700">
 						<div className="text-center mb-8">
 							<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-								¡Hola de nuevo!
+								¡Bienvenido de vuelta!
 							</h2>
 							<p className="text-gray-600 dark:text-gray-400">
-								Accede para continuar tu desarrollo profesional en nuestra plataforma
+								Continúa tu journey tecnológico y accede a todos tus cursos
 							</p>
 						</div>
 
@@ -303,7 +303,7 @@ const ModernLogin = () => {
 								label="Correo electrónico"
 								value={formData.email}
 								onChange={handleInputChange}
-								placeholder="tu.nombre@cooprogreso.fin.ec"
+								placeholder="tu.email@gmail.com"
 								disabled={loading}
 								leftIcon={
 									<svg
@@ -431,7 +431,7 @@ const ModernLogin = () => {
 								disabled={loading}
 								className="mt-8"
 							>
-								{loading ? "Verificando acceso..." : "Continuar mi Desarrollo"}
+								{loading ? "Verificando acceso..." : "Acceder a mis Cursos"}
 							</Button>
 						</form>
 
@@ -440,7 +440,7 @@ const ModernLogin = () => {
 							<div className="mb-2">
 								¿Necesitas ayuda?{" "}
 								<a
-									href="mailto:soporte@cooprogreso.fin.ec"
+									href="mailto:soporte@vanguardia.edu"
 									className="text-primary-600 dark:text-primary-400 hover:text-primary-500 dark:hover:text-primary-300 transition-colors font-medium"
 								>
 									Contáctanos aquí

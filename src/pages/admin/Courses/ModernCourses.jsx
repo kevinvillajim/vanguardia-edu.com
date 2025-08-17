@@ -68,11 +68,11 @@ const ModernCourses = () => {
 		} finally {
 			setLoading(false);
 		}
-	}, [toast]);
+	}, []);
 
 	useEffect(() => {
 		fetchData();
-	}, [fetchData]);
+	}, []);
 
 	const createMissingExpDates = async (expDatesMap) => {
 		const newExpDates = {...expDatesMap};
@@ -145,8 +145,19 @@ const ModernCourses = () => {
 	};
 
 	const getCourseStats = (courseId) => {
-		const courseName = cursos[courseId]?.title;
+		const numericCourseId = parseInt(courseId);
+		const courseName = cursos[numericCourseId]?.title;
+		
+		if (!courseName || !Array.isArray(students)) {
+			return {
+				studentsFinished: 0,
+				studentsInProgress: 0,
+				completionRate: 0,
+			};
+		}
+
 		const studentsFinished = students.filter((student) =>
+			student?.progress && Array.isArray(student.progress) && 
 			student.progress.includes(courseName)
 		);
 		const studentsInProgress = students.length - studentsFinished.length;
@@ -156,14 +167,17 @@ const ModernCourses = () => {
 				: 0;
 
 		return {
-			studentsFinished: studentsFinished.length,
-			studentsInProgress: studentsInProgress,
-			completionRate: completionRate,
+			studentsFinished: studentsFinished.length || 0,
+			studentsInProgress: studentsInProgress || 0,
+			completionRate: isNaN(completionRate) ? 0 : completionRate,
 		};
 	};
 
 	const getStatusBadge = (finished, total) => {
-		if (total === 0) {
+		const finishedCount = isNaN(finished) ? 0 : finished;
+		const totalCount = isNaN(total) ? 0 : total;
+		
+		if (totalCount === 0) {
 			return (
 				<span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
 					Sin estudiantes
@@ -171,7 +185,7 @@ const ModernCourses = () => {
 			);
 		}
 
-		if (finished === total) {
+		if (finishedCount === totalCount) {
 			return (
 				<span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
 					Todos completaron
@@ -181,7 +195,7 @@ const ModernCourses = () => {
 
 		return (
 			<span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-				{finished} / {total}
+				{finishedCount} / {totalCount}
 			</span>
 		);
 	};
@@ -196,11 +210,14 @@ const ModernCourses = () => {
 		{
 			key: "id",
 			title: "#",
-			render: (value, row, index) => (
-				<span className="font-mono text-sm bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-					{index + 1}
-				</span>
-			),
+			render: (value, row, index) => {
+				const safeIndex = isNaN(index) ? 0 : parseInt(index);
+				return (
+					<span className="font-mono text-sm bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+						{safeIndex + 1}
+					</span>
+				);
+			},
 		},
 		{
 			key: "img",
@@ -250,6 +267,10 @@ const ModernCourses = () => {
 				if (!deadline) return "Sin fecha";
 
 				const deadlineDate = new Date(deadline);
+				if (isNaN(deadlineDate.getTime())) {
+					return "Fecha inválida";
+				}
+
 				const currentDate = new Date();
 				const isExpired = currentDate > deadlineDate;
 
@@ -261,7 +282,7 @@ const ModernCourses = () => {
 								: "text-gray-900 dark:text-white"
 						}`}
 					>
-						{new Date(deadline).toLocaleDateString()}
+						{deadlineDate.toLocaleDateString()}
 					</span>
 				);
 			},
@@ -281,7 +302,11 @@ const ModernCourses = () => {
 							showPercentage={false}
 						/>
 						<span className="text-sm text-gray-600 dark:text-gray-400">
-							{Math.round(stats.completionRate)}%
+							{(() => {
+								const rate = stats.completionRate || 0;
+								const rounded = Math.round(rate);
+								return isNaN(rounded) ? 0 : rounded;
+							})()}%
 						</span>
 					</div>
 				);

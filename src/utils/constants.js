@@ -6,9 +6,8 @@ import {API_ENDPOINTS as IMPORTED_ENDPOINTS} from "../services/api/endpoints";
 export const APP_CONFIG = {
 	APP_NAME: "Plataforma Educativa VanguardIA",
 	APP_VERSION: "2.0.0",
-	API_BASE_URL:
-		import.meta.env.REACT_APP_API_URL ||
-		"https://api.capacitacion-cooprogreso.com/api",
+	REACT_APP_API_URL:
+		import.meta.env.VITE_API_URL || "http://localhost:8000/api",
 
 	// Timeouts de sesión
 	SESSION_TIMEOUT: 60 * 60 * 1000, // 1 hora
