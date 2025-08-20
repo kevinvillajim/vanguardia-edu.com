@@ -8,6 +8,26 @@ import containerQueries from "@tailwindcss/container-queries";
 export default {
 	content: ["./src/**/*.{js,jsx,ts,tsx}", "./public/index.html"],
 	darkMode: "class",
+	safelist: [
+		// Gradientes para botones - COMPLETAS
+		'bg-gradient-to-br', 'bg-gradient-to-r',
+		'from-primary-800', 'to-secondary-900', 'from-primary-600', 'to-primary-900',
+		'from-acent-500', 'to-acent-700', 'from-acent-400', 'to-acent-600', 
+		'from-success-500', 'to-success-700', 'from-success-600', 'to-success-800',
+		'from-red-600', 'to-red-700', 'from-red-700', 'to-red-800',
+		// Estados hover para gradientes
+		'hover:from-primary-600', 'hover:to-primary-900',
+		'hover:from-acent-400', 'hover:to-acent-600',
+		'hover:from-success-600', 'hover:to-success-800',
+		'hover:from-red-700', 'hover:to-red-800',
+		// Estados de enfoque y efectos
+		'focus:ring-primary-500', 'focus:ring-acent-500', 'focus:ring-success-500', 'focus:ring-red-500',
+		'shadow-lg', 'hover:shadow-xl', 'active:scale-95',
+		// Colores adicionales
+		'text-primary-600', 'text-primary-400', 'border-primary-600', 'border-primary-400',
+		'border-secondary-300', 'text-primary-500', 'hover:bg-primary-50', 'hover:bg-primary-900/20',
+		'hover:bg-secondary-300', 'bg-primary-500'
+	],
 	theme: {
 		extend: {
 			colors: {
@@ -370,7 +390,7 @@ export default {
 				},
 				".btn-acent": {
 					background: "linear-gradient(135deg, #FF9F1C 0%, #ea580c 100%)",
-					color: theme("colors.white"),
+					color: theme("colors.acent"),
 					boxShadow: "0 10px 15px -3px rgba(255, 159, 28, 0.4), 0 4px 6px -4px rgba(255, 159, 28, 0.1)",
 					"&:hover": {
 						background: "linear-gradient(135deg, #fb923c 0%, #FF9F1C 100%)",

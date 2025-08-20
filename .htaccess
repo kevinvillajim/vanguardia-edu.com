@@ -1,5 +1,5 @@
 RewriteEngine On
-RewriteBase "https://capacitacion-cooprogreso.com/"
+RewriteBase "https://vanguardia-edu.com/"
 
 # Redirigir solicitudes de archivos y directorios existentes
 RewriteCond %{REQUEST_FILENAME} -f [OR]
