@@ -1,7 +1,7 @@
 // src/components/ui/Form/FormExample.jsx
 import {motion} from "framer-motion";
 import {useForm} from "../../../hooks/useForm";
-import {validationRules} from "../../../utils/validation";
+import {validationRules} from "../../../shared/utils/validation";
 import FormField from "./FormField";
 import Select from "./Select";
 import Switch from "./Switch";
@@ -9,6 +9,7 @@ import FileUpload from "./FileUpload";
 import Button from "@/shared/components/ui/Button/Button";
 import Card from "@/shared/components/ui/Card/Card";
 import ValidatedInput from "./ValidatedInput";
+import { CheckCircle, X, Clock } from 'lucide-react';
 
 const FormExample = () => {
 	const {
@@ -209,9 +210,9 @@ const FormExample = () => {
 								Estado del formulario (Debug):
 							</h4>
 							<div className="space-y-1">
-								<div>Valid: {isValid ? "✅" : "❌"}</div>
-								<div>Dirty: {isDirty ? "✅" : "❌"}</div>
-								<div>Submitting: {isSubmitting ? "⏳" : "✅"}</div>
+								<div className="flex items-center gap-1">Valid: {isValid ? <CheckCircle className="w-4 h-4 text-green-500" /> : <X className="w-4 h-4 text-red-500" />}</div>
+								<div className="flex items-center gap-1">Dirty: {isDirty ? <CheckCircle className="w-4 h-4 text-green-500" /> : <X className="w-4 h-4 text-red-500" />}</div>
+								<div className="flex items-center gap-1">Submitting: {isSubmitting ? <Clock className="w-4 h-4 text-blue-500" /> : <CheckCircle className="w-4 h-4 text-green-500" />}</div>
 								<div>Errors: {Object.keys(errors).length}</div>
 								<div>Touched: {Object.keys(touched).length}</div>
 							</div>

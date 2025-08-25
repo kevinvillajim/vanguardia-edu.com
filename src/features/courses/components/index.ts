@@ -1,11 +1,9 @@
-export {default as Certificate} from "./Certificate/Certificados";
-export {default as CertificatePDF} from "./Certificate/CertificatePDF";
-export {default as CourseCard} from "@/shared/components/courses/CourseCard/CourseCard";
-export {default as CourseContent} from "./CourseContent/ContentCourse";
-export {default as CourseProgress} from "./CourseProgress/CourseProgress";
-export {default as Material} from "./Material/Material";
-export {default as Options} from "./Options/Options";
-export {default as Quiz} from "./Quiz/Quiz";
-export {default as ScrollProgress} from "./ScrollProgress/ScrollProgress";
-export {default as UnitContent} from "./UnitContent/UnitContent";
-export {default as Video} from "./Video/Video";
+// Course content components with clean architecture
+export { default as Banner } from './Banner';
+export { default as Video, VideoProvider } from './Video';
+export { default as Paragraph } from './Paragraph';
+export { default as Image } from './Image';
+export { default as Quiz } from './Quiz';
+
+// Re-export component types
+export type { BannerProps, VideoProps, ParagraphProps, ImageProps, QuizProps } from '../../../shared/types/course';

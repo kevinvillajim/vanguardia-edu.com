@@ -1,7 +1,9 @@
-export {Button} from "@/shared/components/ui/Button/Button";
-export {Card} from "@/shared/components/ui/Card/Card";
+// CONSOLIDATED UI COMPONENTS - USE SHARED COMPONENTS
+export { Button, Card, Input, Loading, LoadingSpinner, LoadingOverlay, LoadingScreen, Tabs, VerticalTabs } from "@/shared/components/ui";
+export type { ButtonProps, CardProps, InputProps, LoadingProps, TabsProps, TabItem } from "@/shared/components/ui";
+
+// Legacy UI Components (remaining)
 export {default as Modal} from "./Modal/Modal";
-export {default as Input} from "./Input/Input";
 
 // Form Components
 export {default as FormField} from "./Form/FormField";
@@ -13,12 +15,9 @@ export {default as FormExample} from "./Form/FormExample";
 
 // Navigation Components
 export {default as Breadcrumbs} from "./Navigation/Breadcrumbs";
-export {default as Tabs} from "./Navigation/Tabs";
 export {default as Pagination} from "./Navigation/Pagination";
 
-// Loading & State Components
-export {default as LoadingSpinner} from "./Loading/LoadingSpinner";
-export {default as LoadingOverlay} from "./Loading/LoadingOverlay";
+// State Components
 export {default as EmptyState} from "./EmptyState/EmptyState";
 export {default as Skeleton} from "./Skeleton/Skeleton";
 export {default as SkeletonCard} from "./Skeleton/SkeletonCard";
@@ -38,6 +37,3 @@ export {useToast, ToastProvider} from "./Toast/Toast";
 
 // Theme Components
 export {default as ThemeToggle} from "./ThemeToggle";
-
-// Screen Components
-export {default as LoadingScreen} from "./LoadingScreen";

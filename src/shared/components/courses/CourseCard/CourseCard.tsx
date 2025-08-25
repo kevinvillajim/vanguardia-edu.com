@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Course } from '../../../../services/courses/courseService';
 import { Card } from '../../ui/Card/Card';
+import { MediaImage } from '../../../components/media/MediaImage';
 
 interface CourseCardProps {
   course: Course;
@@ -27,17 +28,6 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   variant = 'default',
   className = ''
 }) => {
-  const formatPrice = (price: number | string | null | undefined) => {
-    // Convert to number and handle various input types
-    const numericPrice = price === null || price === undefined ? 0 : Number(price);
-    
-    // Check if conversion resulted in a valid number
-    if (isNaN(numericPrice)) {
-      return 'Gratis';
-    }
-    
-    return numericPrice === 0 ? 'Gratis' : `$${numericPrice.toFixed(2)}`;
-  };
 
   const formatDuration = (hours: number | string | null | undefined) => {
     // Convert to number and handle various input types
@@ -60,10 +50,12 @@ export const CourseCard: React.FC<CourseCardProps> = ({
           <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
             <div className="aspect-video relative overflow-hidden">
               {course.banner_image ? (
-                <img
+                <MediaImage
                   src={course.banner_image}
                   alt={course.title}
                   className="w-full h-full object-cover"
+                  courseId={course.id}
+                  fallbackStrategy="after-error"
                 />
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
@@ -90,9 +82,6 @@ export const CourseCard: React.FC<CourseCardProps> = ({
                 <span className={`px-2 py-1 rounded-full ${difficultyColors[course.difficulty_level]}`}>
                   {difficultyLabels[course.difficulty_level]}
                 </span>
-                <span className="font-medium text-[var(--color-primary)]">
-                  {formatPrice(course.price)}
-                </span>
               </div>
               
               <p className="text-xs text-gray-600">
@@ -115,10 +104,12 @@ export const CourseCard: React.FC<CourseCardProps> = ({
         <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 h-full">
           <div className={`${variant === 'featured' ? 'aspect-[2/1]' : 'aspect-video'} relative overflow-hidden`}>
             {course.banner_image ? (
-              <img
+              <MediaImage
                 src={course.banner_image}
                 alt={course.title}
                 className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500"
+                courseId={course.id}
+                fallbackStrategy="after-error"
               />
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] flex items-center justify-center">
@@ -147,15 +138,10 @@ export const CourseCard: React.FC<CourseCardProps> = ({
           </div>
           
           <div className="p-6">
-            <div className="flex items-start justify-between mb-3">
-              <h3 className="font-bold text-xl text-gray-900 line-clamp-2 flex-1">
+            <div className="mb-3">
+              <h3 className="font-bold text-xl text-gray-900 line-clamp-2">
                 {course.title}
               </h3>
-              <div className="ml-4 text-right">
-                <span className="text-2xl font-bold text-[var(--color-primary)]">
-                  {formatPrice(course.price)}
-                </span>
-              </div>
             </div>
             
             <p className="text-gray-600 text-sm mb-4 line-clamp-3">
@@ -193,10 +179,11 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             <div className="flex items-center justify-between pt-4 border-t border-gray-100">
               <div className="flex items-center gap-2">
                 {course.teacher.avatar ? (
-                  <img
+                  <MediaImage
                     src={course.teacher.avatar}
                     alt={course.teacher.name}
                     className="w-8 h-8 rounded-full object-cover"
+                    fallbackStrategy="after-error"
                   />
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center text-sm font-medium">
@@ -225,3 +212,5 @@ export const CourseCard: React.FC<CourseCardProps> = ({
     </motion.div>
   );
 };
+
+export default CourseCard;

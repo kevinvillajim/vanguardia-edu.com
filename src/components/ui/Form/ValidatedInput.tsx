@@ -1,4 +1,4 @@
-import Input from "../Input/Input";
+import { Input } from "@/shared/components/ui";
 import FormField from "./FormField";
 import PropTypes from "prop-types";
 

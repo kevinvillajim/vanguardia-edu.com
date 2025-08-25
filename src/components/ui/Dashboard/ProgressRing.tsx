@@ -1,5 +1,5 @@
 // src/components/ui/Dashboard/ProgressRing.jsx
-import {motion} from "motion/react";
+import {motion} from "framer-motion";
 import PropTypes from "prop-types";
 
 const ProgressRing = ({

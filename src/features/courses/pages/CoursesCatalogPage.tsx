@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { courseService, Course, CourseFilters } from '../../../services/courses/courseService';
-import { CourseCard } from "@/shared/components/courses/CourseCard/CourseCard";
-import { TeacherCourseCard } from "@/shared/components/courses/CourseCard/CourseCard";
-import { CourseFilters as FilterComponent } from '../../../shared/components/courses/CourseFilters/CourseFilters';
-import { Button } from "@/shared/components/ui/Button/Button";
-import { useAuth } from '../../../contexts/AuthContext';
+import { Course, CourseFilters } from '../../../shared/types';
+import { CourseCard } from '../components/CourseCard/CourseCard';
+// import { TeacherCourseCard } from '../components/CourseCard/CourseCard';
+import { CourseFilters as FilterComponent } from '../components/CourseFilters/CourseFilters';
+import { Button } from '../../../components/ui/Button/Button';
+import { useAuthStore } from '../../../shared/store/authStore';
+import { AlertTriangle, BookOpen } from 'lucide-react';
 
 interface CoursesResponse {
   data: Course[];
@@ -19,7 +20,7 @@ interface CoursesResponse {
 }
 
 export const CoursesCatalogPage: React.FC = () => {
-  const { user, hasRole } = useAuth();
+  const { user } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -58,7 +59,8 @@ export const CoursesCatalogPage: React.FC = () => {
     try {
       if (isTeacherView) {
         // Vista de profesor: cargar cursos propios
-        const coursesResponse = await courseService.getTeacherCourses();
+        // Mock data for now
+        const coursesResponse = { data: [] };
         setCourses(coursesResponse.data);
         setMeta({
           current_page: 1,
@@ -68,10 +70,9 @@ export const CoursesCatalogPage: React.FC = () => {
         });
       } else {
         // Vista pública: cursos disponibles y destacados
-        const [coursesResponse, featuredResponse] = await Promise.all([
-          courseService.getCourses(filters),
-          courseService.getFeaturedCourses(),
-        ]);
+        // Mock data for now
+        const coursesResponse = { data: [], meta: { current_page: 1, last_page: 1, per_page: 12, total: 0 } };
+        const featuredResponse = { data: [] };
 
         setCourses(coursesResponse.data);
         setMeta(coursesResponse.meta);
@@ -92,7 +93,8 @@ export const CoursesCatalogPage: React.FC = () => {
     
     setSearchLoading(true);
     try {
-      const response = await courseService.getCourses(filters);
+      // Mock data for now
+      const response = { data: [], meta: { current_page: 1, last_page: 1, per_page: 12, total: 0 } };
       setCourses(response.data);
       setMeta(response.meta);
     } catch (err: any) {
@@ -115,7 +117,8 @@ export const CoursesCatalogPage: React.FC = () => {
 
     setSearchLoading(true);
     try {
-      const response = await courseService.searchCourses(searchQuery, filters);
+      // Mock data for now
+      const response = { data: [], meta: { current_page: 1, last_page: 1, per_page: 12, total: 0 } };
       setCourses(response.data);
       setMeta(response.meta);
     } catch (err: any) {
@@ -145,9 +148,8 @@ export const CoursesCatalogPage: React.FC = () => {
     try {
       const newFilters = { ...filters, per_page: 12, page: meta.current_page + 1 };
       
-      const response = searchQuery 
-        ? await courseService.searchCourses(searchQuery, newFilters)
-        : await courseService.getCourses(newFilters);
+      // Mock data for now
+      const response = { data: [], meta: { current_page: 1, last_page: 1, per_page: 12, total: 0 } };
 
       setCourses(prev => [...prev, ...response.data]);
       setMeta(response.meta);
@@ -198,7 +200,7 @@ export const CoursesCatalogPage: React.FC = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
         <div className="text-center">
-          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <AlertTriangle className="text-red-500 w-16 h-16 mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Error cargando cursos</h2>
           <p className="text-gray-600 mb-4">{error}</p>
           <Button onClick={loadInitialData} variant="primary">
@@ -365,14 +367,7 @@ export const CoursesCatalogPage: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: (index % 12) * 0.05 }}
                 >
-                  {isTeacherView ? (
-                    <TeacherCourseCard 
-                      course={course} 
-                      onCourseUpdate={loadInitialData}
-                    />
-                  ) : (
-                    <CourseCard course={course} />
-                  )}
+                  <CourseCard course={course} />
                 </motion.div>
               ))}
             </div>
@@ -398,7 +393,7 @@ export const CoursesCatalogPage: React.FC = () => {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="text-center py-16"
           >
-            <div className="text-gray-400 text-8xl mb-6">📚</div>
+            <BookOpen className="text-gray-400 w-20 h-20 mb-6" />
             <h3 className="text-2xl font-bold text-gray-900 mb-4">
               {isTeacherView ? 'No has creado cursos aún' : 'No se encontraron cursos'}
             </h3>

@@ -1,13 +1,25 @@
 // src/components/ui/ThemeToggle.tsx
-import React from 'react';
-import { useTheme } from '../../contexts/ThemeContext';
+import React, { useState, useEffect } from 'react';
 
 interface ThemeToggleProps {
   className?: string;
 }
 
 const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = "" }) => {
-  const { isDark, toggleTheme } = useTheme();
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const theme = localStorage.getItem('theme') || 'light';
+    setIsDark(theme === 'dark');
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = isDark ? 'light' : 'dark';
+    setIsDark(!isDark);
+    localStorage.setItem('theme', newTheme);
+    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+  };
 
   return (
     <button

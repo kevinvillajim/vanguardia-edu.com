@@ -1,6 +1,6 @@
 // src/components/ui/Modal/Modal.jsx
 import {useEffect} from "react";
-import {motion, AnimatePresence} from "motion/react";
+import {motion, AnimatePresence} from "framer-motion";
 import {createPortal} from "react-dom";
 import PropTypes from "prop-types";
 
