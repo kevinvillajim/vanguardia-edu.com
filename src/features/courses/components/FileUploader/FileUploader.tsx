@@ -57,13 +57,14 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     setError(null);
     
     // Validate file
-    const validation = uploadService.validateFile(file, {
+    const validation = await uploadService.validateFile(file, {
+      type: componentType,
       maxSize,
       allowedTypes: getAcceptedTypes()
     });
 
-    if (!validation.valid) {
-      setError(validation.error || 'Archivo no válido');
+    if (!validation.isValid) {
+      setError(validation.error?.message || 'Archivo no válido');
       return;
     }
 
@@ -115,11 +116,11 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
           onUploadComplete(result.fileUrl!, metadata);
         }
       } else {
-        setError(result.error || 'Error al subir el archivo');
+        setError(typeof result.error === 'string' ? result.error : result.error?.message || 'Error al subir el archivo');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload error:', error);
-      setError('Error al subir el archivo');
+      setError(typeof error === 'string' ? error : error?.message || 'Error al subir el archivo');
     } finally {
       setUploading(false);
     }

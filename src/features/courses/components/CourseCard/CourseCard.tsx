@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Course } from '../../../../shared/types';
+import { Course } from '../../../../domain/entities/Course';
 import { Card, MediaImage } from '../../../../shared/components';
 import { Star } from 'lucide-react';
 
@@ -49,9 +49,9 @@ export const CourseCard: React.FC<CourseCardProps> = ({
         <Link to={`/courses/${course.slug}`}>
           <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
             <div className="aspect-video relative overflow-hidden">
-              {course.banner_image ? (
+              {course.bannerImage ? (
                 <MediaImage
-                  src={course.banner_image}
+                  src={course.bannerImage}
                   alt={course.title}
                   className="w-full h-full object-cover"
                   courseId={course.id}
@@ -64,7 +64,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
                   </span>
                 </div>
               )}
-              {course.is_featured && (
+              {course.isFeatured && (
                 <div className="absolute top-2 right-2">
                   <span className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs px-2 py-1 rounded-full font-medium">
                     Destacado
@@ -79,8 +79,8 @@ export const CourseCard: React.FC<CourseCardProps> = ({
               </h3>
               
               <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
-                <span className={`px-2 py-1 rounded-full ${difficultyColors[course.difficulty_level]}`}>
-                  {difficultyLabels[course.difficulty_level]}
+                <span className={`px-2 py-1 rounded-full ${difficultyColors[course.difficulty]}`}>
+                  {difficultyLabels[course.difficulty]}
                 </span>
               </div>
               
@@ -103,9 +103,9 @@ export const CourseCard: React.FC<CourseCardProps> = ({
       <Link to={`/courses/${course.slug}`}>
         <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 h-full">
           <div className={`${variant === 'featured' ? 'aspect-[2/1]' : 'aspect-video'} relative overflow-hidden`}>
-            {course.banner_image ? (
+            {course.bannerImage ? (
               <MediaImage
-                src={course.banner_image}
+                src={course.bannerImage}
                 alt={course.title}
                 className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500"
                 courseId={course.id}
@@ -122,7 +122,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             {/* Overlay con badges */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
             
-            {course.is_featured && (
+            {course.isFeatured && (
               <div className="absolute top-4 right-4">
                 <span className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-sm px-3 py-1 rounded-full font-medium shadow-lg flex items-center gap-1">
                   <Star className="w-4 h-4" /> Destacado
@@ -131,8 +131,8 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             )}
             
             <div className="absolute bottom-4 left-4">
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${difficultyColors[course.difficulty_level]}`}>
-                {difficultyLabels[course.difficulty_level]}
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${difficultyColors[course.difficulty]}`}>
+                {difficultyLabels[course.difficulty]}
               </span>
             </div>
           </div>
@@ -154,15 +154,15 @@ export const CourseCard: React.FC<CourseCardProps> = ({
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  {formatDuration(course.duration_hours)}
+                  {formatDuration(course.durationHours)}
                 </span>
                 
-                {course.total_lessons && (
+                {course.totalLessons && (
                   <span className="flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                     </svg>
-                    {course.total_lessons} lecciones
+                    {course.totalLessons} lecciones
                   </span>
                 )}
               </div>
@@ -172,7 +172,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                 </svg>
                 <span className="font-medium">{course.rating}</span>
-                <span className="text-gray-400">({course.enrollment_count})</span>
+                <span className="text-gray-400">({course.enrollmentCount})</span>
               </div>
             </div>
             

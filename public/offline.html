@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VanguardIA - Sin Conexión</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .offline-container {
+            text-align: center;
+            max-width: 500px;
+            padding: 2rem;
+        }
+        
+        .offline-icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 2rem;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+        
+        p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+        
+        .retry-button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 12px 24px;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .retry-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        .status-indicator {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .status-online {
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+        
+        .status-offline {
+            background: rgba(244, 67, 54, 0.2);
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+        
+        .checking {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">
+            📡
+        </div>
+        
+        <h1>Sin Conexión</h1>
+        
+        <p>
+            No tienes conexión a internet en este momento. 
+            Verifica tu conexión e intenta nuevamente.
+        </p>
+        
+        <button class="retry-button" onclick="checkConnection()">
+            🔄 Reintentar Conexión
+        </button>
+        
+        <div class="status-indicator" id="status">
+            <div id="status-text">Verificando conexión...</div>
+        </div>
+    </div>
+
+    <script>
+        let isOnline = navigator.onLine;
+        let retryCount = 0;
+        const maxRetries = 5;
+
+        function updateStatus() {
+            const statusElement = document.getElementById('status');
+            const statusText = document.getElementById('status-text');
+            
+            if (isOnline) {
+                statusElement.className = 'status-indicator status-online';
+                statusText.textContent = '🟢 Conexión restaurada - Redirigiendo...';
+                
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+            } else {
+                statusElement.className = 'status-indicator status-offline';
+                statusText.textContent = '🔴 Sin conexión a internet';
+            }
+        }
+
+        function checkConnection() {
+            const statusElement = document.getElementById('status');
+            const statusText = document.getElementById('status-text');
+            const retryButton = document.querySelector('.retry-button');
+            
+            retryButton.disabled = true;
+            retryButton.textContent = '🔄 Verificando...';
+            statusElement.className = 'status-indicator checking';
+            statusText.textContent = 'Verificando conexión...';
+            
+            // Intentar cargar un recurso pequeño del servidor
+            fetch('/', { 
+                method: 'HEAD',
+                cache: 'no-cache',
+                mode: 'no-cors'
+            })
+            .then(() => {
+                isOnline = true;
+                updateStatus();
+            })
+            .catch(() => {
+                retryCount++;
+                
+                if (retryCount >= maxRetries) {
+                    statusText.textContent = `❌ Sin conexión después de ${maxRetries} intentos`;
+                    retryButton.textContent = '🔄 Reintentar desde el inicio';
+                    retryCount = 0;
+                } else {
+                    statusText.textContent = `🔄 Intento ${retryCount}/${maxRetries} - Sin conexión`;
+                    retryButton.textContent = '🔄 Reintentar Conexión';
+                }
+                
+                isOnline = false;
+                statusElement.className = 'status-indicator status-offline';
+            })
+            .finally(() => {
+                retryButton.disabled = false;
+            });
+        }
+
+        // Listeners para cambios de conectividad
+        window.addEventListener('online', () => {
+            isOnline = true;
+            updateStatus();
+        });
+
+        window.addEventListener('offline', () => {
+            isOnline = false;
+            updateStatus();
+        });
+
+        // Verificar conexión inicial
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(checkConnection, 1000);
+        });
+
+        // Verificar conexión cada 30 segundos
+        setInterval(() => {
+            if (!isOnline) {
+                checkConnection();
+            }
+        }, 30000);
+
+        // Mostrar información adicional en debug
+        if (localStorage.getItem('debug') === 'true') {
+            const debugInfo = document.createElement('div');
+            debugInfo.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                left: 20px;
+                background: rgba(0,0,0,0.8);
+                color: white;
+                padding: 10px;
+                border-radius: 5px;
+                font-size: 12px;
+                max-width: 300px;
+            `;
+            
+            debugInfo.innerHTML = `
+                <strong>Debug Info:</strong><br>
+                Navigator Online: ${navigator.onLine}<br>
+                User Agent: ${navigator.userAgent.substring(0, 50)}...<br>
+                Timestamp: ${new Date().toISOString()}<br>
+                Retry Count: <span id="debug-retry">0</span>
+            `;
+            
+            document.body.appendChild(debugInfo);
+            
+            setInterval(() => {
+                document.getElementById('debug-retry').textContent = retryCount;
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

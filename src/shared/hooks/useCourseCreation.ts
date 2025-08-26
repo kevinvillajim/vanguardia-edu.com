@@ -129,13 +129,13 @@ export const useCourseCreation = (showNotification?: NotificationFn) => {
   }, [setLoading, setError, clearError, showNotification]);
 
   // Unit operations
-  const createUnit = useCallback(async (courseId: number, unitData: CreateUnitData): Promise<{ success: boolean; unitId?: number }> => {
+  const createUnit = useCallback(async (courseId: number, unitData: CreateUnitData): Promise<{ success: boolean; unitId?: number; unit?: CourseUnit }> => {
     try {
       const result = await courseService.createUnit(courseId, unitData);
       
       if (result.success) {
         showNotification?.('success', 'Éxito', 'Unidad creada exitosamente');
-        return { success: true, unitId: result.unitId };
+        return { success: true, unitId: result.unit?.id, unit: result.unit };
       } else {
         showNotification?.('error', 'Error', result.error || 'Error al crear la unidad');
         return { success: false };
@@ -148,13 +148,13 @@ export const useCourseCreation = (showNotification?: NotificationFn) => {
   }, [showNotification]);
 
   // Module operations
-  const createModule = useCallback(async (unitId: number, moduleData: CreateModuleData): Promise<{ success: boolean; moduleId?: number }> => {
+  const createModule = useCallback(async (unitId: number, moduleData: CreateModuleData): Promise<{ success: boolean; moduleId?: number; module?: CourseModule }> => {
     try {
       const result = await courseService.createModule(unitId, moduleData);
       
       if (result.success) {
         showNotification?.('success', 'Éxito', 'Módulo creado exitosamente');
-        return { success: true, moduleId: result.moduleId };
+        return { success: true, moduleId: result.module?.id, module: result.module };
       } else {
         showNotification?.('error', 'Error', result.error || 'Error al crear el módulo');
         return { success: false };
@@ -167,13 +167,13 @@ export const useCourseCreation = (showNotification?: NotificationFn) => {
   }, [showNotification]);
 
   // Component operations
-  const createComponent = useCallback(async (moduleId: number, componentData: CreateComponentData): Promise<{ success: boolean; componentId?: number }> => {
+  const createComponent = useCallback(async (moduleId: number, componentData: CreateComponentData): Promise<{ success: boolean; componentId?: number; component?: CourseComponent }> => {
     try {
       const result = await courseService.createComponent(moduleId, componentData);
       
       if (result.success) {
         showNotification?.('success', 'Éxito', 'Componente creado exitosamente');
-        return { success: true, componentId: result.componentId };
+        return { success: true, componentId: result.component?.id, component: result.component };
       } else {
         showNotification?.('error', 'Error', result.error || 'Error al crear el componente');
         return { success: false };

@@ -86,10 +86,20 @@ export class CourseService {
     }
   }
 
+  async getTeacherCourse(courseId: number): Promise<{ success: boolean; course?: Course; error?: string }> {
+    try {
+      const course = await this.courseRepository.getTeacherCourseById(courseId);
+      return { success: true, course };
+    } catch (error: any) {
+      logger.error('❌ Error getting teacher course:', error);
+      return { success: false, error: error.message || 'Error al obtener el curso del profesor' };
+    }
+  }
+
   /**
    * Create a new unit in a course
    */
-  async createUnit(courseId: number, unitData: CreateUnitData): Promise<{ success: boolean; unit?: CourseUnit; unitId?: number; error?: string }> {
+  async createUnit(courseId: number, unitData: CreateUnitData): Promise<{ success: boolean; unit?: CourseUnit; error?: string }> {
     try {
       logger.info('📚 CourseService createUnit:', { courseId, unitData });
       const unit = await this.courseRepository.createUnit(courseId, unitData);
@@ -97,7 +107,7 @@ export class CourseService {
       
       // Verificar si unit es un objeto válido
       if (unit && typeof unit === 'object' && unit.id) {
-        return { success: true, unit, unitId: unit.id };
+        return { success: true, unit };
       } else {
         logger.error('❌ Unit recibido no es válido:', unit);
         return { success: false, error: 'Respuesta del servidor inválida' };
@@ -137,10 +147,10 @@ export class CourseService {
   /**
    * Create a new module in a unit
    */
-  async createModule(unitId: number, moduleData: CreateModuleData): Promise<{ success: boolean; module?: CourseModule; moduleId?: number; error?: string }> {
+  async createModule(unitId: number, moduleData: CreateModuleData): Promise<{ success: boolean; module?: CourseModule; error?: string }> {
     try {
       const module = await this.courseRepository.createModule(unitId, moduleData);
-      return { success: true, module, moduleId: module.id };
+      return { success: true, module };
     } catch (error: any) {
       logger.error('❌ Error creating module:', error);
       return { success: false, error: error.message || 'Error al crear el módulo' };
@@ -176,10 +186,10 @@ export class CourseService {
   /**
    * Create a new component in a module
    */
-  async createComponent(moduleId: number, componentData: CreateComponentData): Promise<{ success: boolean; component?: CourseComponent; componentId?: number; error?: string }> {
+  async createComponent(moduleId: number, componentData: CreateComponentData): Promise<{ success: boolean; component?: CourseComponent; error?: string }> {
     try {
       const component = await this.courseRepository.createComponent(moduleId, componentData);
-      return { success: true, component, componentId: component.id };
+      return { success: true, component };
     } catch (error: any) {
       logger.error('❌ Error creating component:', error);
       return { success: false, error: error.message || 'Error al crear el componente' };

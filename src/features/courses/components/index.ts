@@ -5,5 +5,5 @@ export { default as Paragraph } from './Paragraph';
 export { default as Image } from './Image';
 export { default as Quiz } from './Quiz';
 
-// Re-export component types
-export type { BannerProps, VideoProps, ParagraphProps, ImageProps, QuizProps } from '../../../shared/types/course';
+// Re-export component types from domain
+export type { CourseComponent, QuizQuestion, ComponentType } from '../../../domain/entities/Course';

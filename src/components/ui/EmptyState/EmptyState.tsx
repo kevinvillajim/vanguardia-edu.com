@@ -1,6 +1,6 @@
 // src/components/ui/EmptyState/EmptyState.jsx
 import {motion} from "framer-motion";
-import Button from "@/shared/components/ui/Button/Button";
+import { Button } from "@/shared/components";
 import PropTypes from "prop-types";
 
 const EmptyState = ({

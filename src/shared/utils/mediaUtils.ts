@@ -15,6 +15,11 @@ export const buildMediaUrl = (
   unitId?: number,
   mediaType: 'images' | 'videos' | 'documents' | 'audio' = 'images'
 ): string => {
+  // Guard against undefined or null paths
+  if (!mediaPath) {
+    return getFallbackUrl(mediaType);
+  }
+
   // If the path is already a full URL, return as is
   if (mediaPath.startsWith('http://') || mediaPath.startsWith('https://')) {
     return mediaPath;

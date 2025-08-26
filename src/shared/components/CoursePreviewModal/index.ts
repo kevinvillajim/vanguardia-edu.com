@@ -1,0 +1,1 @@
+export { CoursePreviewModal, default } from './CoursePreviewModal';

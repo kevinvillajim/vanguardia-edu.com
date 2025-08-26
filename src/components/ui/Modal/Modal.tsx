@@ -18,6 +18,7 @@ const Modal = ({
 		md: "max-w-lg",
 		lg: "max-w-2xl",
 		xl: "max-w-4xl",
+		"2xl": "max-w-6xl",
 		full: "max-w-full mx-4",
 	};
 
@@ -105,7 +106,7 @@ Modal.propTypes = {
 	onClose: PropTypes.func.isRequired,
 	children: PropTypes.node,
 	title: PropTypes.string,
-	size: PropTypes.oneOf(["sm", "md", "lg", "xl", "full"]),
+	size: PropTypes.oneOf(["sm", "md", "lg", "xl", "2xl", "full"]),
 	closeOnBackdrop: PropTypes.bool,
 	className: PropTypes.string,
 };

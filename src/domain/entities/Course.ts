@@ -12,14 +12,24 @@ export interface Course extends BaseEntity {
     avatar?: string;
   };
   bannerImage?: string;
-  durationHours: number;
-  difficulty: CourseDifficulty;
+  duration_hours: number;
+  totalLessons?: number;
+  difficulty_level: CourseDifficulty;
   status: CourseStatus;
   isPublished: boolean;
   enrollmentCount: number;
   rating?: number;
   ratingCount?: number;
+  isFeatured?: boolean;
+  averageProgress?: number;
   tags?: string[];
+  learningObjectives?: string[];
+  prerequisites?: string[];
+  categoryId?: number;
+  category?: {
+    id: number;
+    name: string;
+  };
   units?: CourseUnit[];
 }
 
@@ -79,9 +89,12 @@ export interface CreateCourseData {
   title: string;
   description: string;
   shortDescription?: string;
-  durationHours: number;
-  difficulty: CourseDifficulty;
+  duration_hours: number;
+  difficulty_level: CourseDifficulty;
   tags?: string[];
   categoryId?: number;
   teacherId?: number;
+  bannerImage?: string;
+  learningObjectives?: string[];
+  prerequisites?: string[];
 }

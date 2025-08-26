@@ -180,6 +180,32 @@ export const APP_CONFIG = {
 } as const;
 
 /**
+ * Configuraciones de permisos y funcionalidades
+ */
+const PERMISSIONS_CONFIG = {
+  // Permisos de profesor
+  teacher: {
+    canDeleteCourses: import.meta.env.VITE_TEACHER_CAN_DELETE === 'true' || false,
+    canCloneCourses: true,
+    canManageStudents: true,
+    canViewAnalytics: true,
+  },
+  // Permisos de estudiante
+  student: {
+    canReviewCourses: true,
+    canDownloadCertificates: true,
+    canShareProgress: false,
+  },
+  // Permisos de admin
+  admin: {
+    canDeleteAnyContent: true,
+    canManageUsers: true,
+    canViewSystemMetrics: true,
+    canModifySettings: true,
+  }
+} as const;
+
+/**
  * Obtener configuración completa según el entorno
  */
 export function getAppConfig(environment?: 'development' | 'production' | 'testing') {
@@ -190,8 +216,16 @@ export function getAppConfig(environment?: 'development' | 'production' | 'testi
     api: getApiConfig(env),
     ui: getUiConfig(), // Usar configuración por defecto
     course: getCourseConfig(), // Usar configuración por defecto
+    permissions: PERMISSIONS_CONFIG,
     environment: env,
   };
+}
+
+/**
+ * Obtener configuración simplificada (alias para getAppConfig)
+ */
+export function getConfig(environment?: 'development' | 'production' | 'testing') {
+  return getAppConfig(environment);
 }
 
 /**

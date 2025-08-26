@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { CourseFilters as Filters } from '../../../../shared/types';
 import { Button } from '../../../../components/ui/Button/Button';
+import { useCategories } from '../../../../hooks/useCategories';
 // import { useResponsive } from '../../../hooks/useResponsive';
 // import { useReducedMotion } from '../../../hooks/useAccessibility';
 
@@ -39,6 +40,13 @@ export const CourseFilters: React.FC<CourseFiltersProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const [localFilters, setLocalFilters] = useState<Filters>(filters);
+  
+  // Cargar categorías para el filtro
+  const { categories, loading: categoriesLoading } = useCategories({ 
+    isActive: true,
+    sortBy: 'name',
+    sortDirection: 'asc'
+  });
 
   const handleFilterChange = (key: keyof Filters, value: any) => {
     const newFilters = { ...localFilters, [key]: value === '' ? undefined : value };
@@ -158,8 +166,8 @@ export const CourseFilters: React.FC<CourseFiltersProps> = ({
               </label>
               <select
                 id="difficulty-filter"
-                value={localFilters.difficulty_level || ''}
-                onChange={(e) => handleFilterChange('difficulty_level', e.target.value)}
+                value={localFilters.difficulty || ''}
+                onChange={(e) => handleFilterChange('difficulty', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
                 aria-label="Filtrar por nivel de dificultad"
               >
@@ -169,6 +177,36 @@ export const CourseFilters: React.FC<CourseFiltersProps> = ({
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* Category Filter */}
+            <div>
+              <label 
+                htmlFor="category-filter"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Categoría
+              </label>
+              <select
+                id="category-filter"
+                value={localFilters.categoryId || ''}
+                onChange={(e) => handleFilterChange('categoryId', e.target.value ? parseInt(e.target.value) : undefined)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
+                aria-label="Filtrar por categoría"
+                disabled={categoriesLoading}
+              >
+                <option value="">Todas las categorías</option>
+                {categories.map(category => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+              {categoriesLoading && (
+                <div className="mt-1 text-xs text-gray-500">
+                  Cargando categorías...
+                </div>
+              )}
             </div>
 
             {/* Sort By */}
@@ -181,8 +219,8 @@ export const CourseFilters: React.FC<CourseFiltersProps> = ({
               </label>
               <select
                 id="sort-filter"
-                value={localFilters.sort_by || ''}
-                onChange={(e) => handleFilterChange('sort_by', e.target.value)}
+                value={localFilters.sortBy || ''}
+                onChange={(e) => handleFilterChange('sortBy', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
                 aria-label="Ordenar cursos por"
               >
@@ -263,20 +301,39 @@ export const CourseFilters: React.FC<CourseFiltersProps> = ({
                 </Button>
 
                 <Button
-                  variant={localFilters.sort_by === 'rating' ? 'primary' : 'ghost'}
+                  variant={localFilters.sortBy === 'rating' ? 'primary' : 'ghost'}
                   size="sm"
-                  onClick={() => handleFilterChange('sort_by', 'rating')}
+                  onClick={() => handleFilterChange('sortBy', 'rating')}
                 >
                   Mejor valorados
                 </Button>
 
                 <Button
-                  variant={localFilters.sort_by === 'popular' ? 'primary' : 'ghost'}
+                  variant={localFilters.sortBy === 'popular' ? 'primary' : 'ghost'}
                   size="sm"
-                  onClick={() => handleFilterChange('sort_by', 'popular')}
+                  onClick={() => handleFilterChange('sortBy', 'popular')}
                 >
                   Más populares
                 </Button>
+
+                {/* Filtros rápidos por categoría - mostrar las 3 más populares */}
+                {categories.slice(0, 3).map(category => (
+                  <Button
+                    key={`quick-cat-${category.id}`}
+                    variant={localFilters.categoryId === category.id ? 'primary' : 'ghost'}
+                    size="sm"
+                    onClick={() => handleFilterChange('categoryId', 
+                      localFilters.categoryId === category.id ? undefined : category.id
+                    )}
+                    style={category.color ? { 
+                      borderColor: localFilters.categoryId === category.id ? category.color : undefined,
+                      backgroundColor: localFilters.categoryId === category.id ? `${category.color}15` : undefined
+                    } : undefined}
+                  >
+                    {category.icon && <span className="mr-1">{category.icon}</span>}
+                    {category.name}
+                  </Button>
+                ))}
               </div>
             </fieldset>
           </div>

@@ -14,7 +14,9 @@ import AboutPage from './pages/public/AboutPage';
 import ContactPage from './pages/public/ContactPage';
 import StudentDashboardPage from './pages/student/StudentDashboardPage';
 import TeacherDashboardPage from './pages/teacher/TeacherDashboardPage';
+import TeacherCoursesPage from './pages/teacher/TeacherCoursesPage';
 import CreateCoursePage from './pages/teacher/CreateCoursePage';
+import EditCoursePage from './pages/teacher/EditCoursePage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 
 // Layouts
@@ -130,10 +132,26 @@ const App: React.FC = () => {
           }
         />
         <Route
+          path="/teacher/courses"
+          element={
+            <ProtectedRoute requiredRole={UserRole.TEACHER}>
+              <TeacherCoursesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/teacher/courses/create"
           element={
             <ProtectedRoute requiredRole={UserRole.TEACHER}>
               <CreateCoursePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/courses/:courseId/edit"
+          element={
+            <ProtectedRoute requiredRole={UserRole.TEACHER}>
+              <EditCoursePage />
             </ProtectedRoute>
           }
         />

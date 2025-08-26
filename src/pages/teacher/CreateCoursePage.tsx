@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { debounce } from 'lodash';
 import { useAuthStore } from '../../shared/store/authStore';
 import { DashboardLayout } from '../../shared/layouts/dashboard/DashboardLayout';
 import { TeacherCourseBuilder } from '../../features/courses/components/TeacherCourseBuilder/TeacherCourseBuilder';
@@ -19,48 +20,36 @@ import Quiz from '../../features/courses/components/Quiz';
 import Document from '../../features/courses/components/Document';
 import { AudioPlayer } from '../../shared/components/media/AudioPlayer';
 import { buildMediaUrl } from '../../shared/utils/mediaUtils';
+import { courseService } from '../../services/courseService';
 
-export interface CourseData {
-  title: string;
-  description: string;
-  category_id: number | null;
-  difficulty_level: 'beginner' | 'intermediate' | 'advanced';
-  banner_image?: string;
-  learning_objectives: string[];
-  prerequisites: string[];
-  modules: ModuleData[];
+// Importar tipos del domain
+import { Course, CourseUnit, CourseModule, CourseComponent, CreateCourseData, CourseStatus } from '../../domain/entities/Course';
+import { CourseDifficulty } from '../../shared/types';
+import { useCategories } from '../../hooks/useCategories';
+import { useCourseValidation } from '../../hooks/useValidation';
+import { CourseValidator } from '../../shared/validation';
+import { useHybridAutoSave } from '../../hooks/useHybridAutoSave';
+import { Loader } from 'lucide-react';
+import { FileUploadSection } from '../../features/courses/components/ComponentEditor/shared/FileUploadSection';
+import { CoursePreviewModal } from '../../shared/components/CoursePreviewModal/CoursePreviewModal';
+
+// Interface específica para el formulario de configuración
+export interface CourseFormData extends Omit<CreateCourseData, 'categoryId'> {
+  categoryId: number | null; // Permite null para "sin categoría"
+  learningObjectives: string[]; // Requerido en el form
+  prerequisites: string[]; // Requerido en el form
 }
 
-export interface ModuleData {
-  id?: number;
-  title: string;
-  description: string;
-  order: number;
-  lessons: LessonData[];
-}
-
-export interface LessonData {
-  id?: number;
-  title: string;
-  description: string;
-  type: 'video' | 'text' | 'quiz' | 'interactive';
-  duration_minutes: number;
-  order: number;
-  is_preview: boolean;
-  content: LessonContent[];
-}
-
-export interface LessonContent {
-  id?: number;
-  type: 'text' | 'video' | 'image' | 'quiz' | 'code' | 'interactive';
-  content: any;
-  order: number;
-}
+// Usar las entidades del domain directamente
+export type CourseBuilderData = Course;
+export type UnitData = CourseUnit;
+export type ModuleData = CourseModule;
+export type ComponentData = CourseComponent;
 
 const TABS = [
+  { id: 'settings', label: 'Configuración', icon: Settings },
   { id: 'builder', label: 'Constructor', icon: Hammer },
-  { id: 'preview', label: 'Vista Previa', icon: Eye },
-  { id: 'settings', label: 'Configuración', icon: Settings }
+  { id: 'preview', label: 'Vista Previa', icon: Eye }
 ] as const;
 
 type TabId = typeof TABS[number]['id'];
@@ -69,53 +58,118 @@ export const CreateCoursePage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   
-  const [activeTab, setActiveTab] = useState<TabId>('builder');
-  const [courseData, setCourseData] = useState<CourseData>({
+  const [activeTab, setActiveTab] = useState<TabId>('settings');
+  const [courseData, setCourseData] = useState<CourseFormData>({
     title: '',
     description: '',
-    category_id: null,
-    difficulty_level: 'beginner',
-    learning_objectives: [],
-    prerequisites: [],
-    modules: []
+    categoryId: null,
+    difficulty_level: CourseDifficulty.BEGINNER,
+    duration_hours: 0,
+    bannerImage: undefined,
+    learningObjectives: [],
+    prerequisites: []
   });
   
   const [isDirty, setIsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
+  const [courseCreated, setCourseCreated] = useState(false);
+  const [currentCourseId, setCurrentCourseId] = useState<number | null>(null);
+  
+  // Sistema de auto-guardado híbrido
+  const autoSave = useHybridAutoSave({
+    courseId: currentCourseId,
+    enabled: courseCreated, // Solo activar después de crear el curso
+    onSaveSuccess: () => {
+      logger.success('✅ Borrador guardado automáticamente');
+      setIsDirty(false);
+    },
+    onSaveError: (error) => {
+      logger.error('❌ Error guardando borrador:', error);
+    }
+  });
+  // Sistema de validación centralizado
+  const courseValidation = useCourseValidation({
+    title: courseData.title,
+    description: courseData.description,
+    difficulty_level: courseData.difficulty_level,
+    duration_hours: courseData.duration_hours,
+    learningObjectives: courseData.learningObjectives,
+    prerequisites: courseData.prerequisites
+  });
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [previewCurrentModuleId, setPreviewCurrentModuleId] = useState<string | null>(null);
   const [builderData, setBuilderData] = useState<any>(null); // Datos reales del constructor
-  const [uploadingBanner, setUploadingBanner] = useState(false);
-  const [categories, setCategories] = useState([
-    { id: 1, name: 'Desarrollo y Programación' },
-    { id: 2, name: 'Habilidades Técnicas' },
-    { id: 3, name: 'Habilidades Blandas' },
-    { id: 4, name: 'Liderazgo y Gestión' },
-    { id: 5, name: 'Procesos Empresariales' },
-    { id: 6, name: 'Seguridad y Compliance' },
-    { id: 7, name: 'Recursos Humanos' },
-    { id: 8, name: 'Herramientas y Software' }
-  ]); // Categorías para cursos empresarial
+  // Cargar categorías desde el backend
+  const { 
+    categories, 
+    loading: categoriesLoading, 
+    error: categoriesError,
+    createCategory 
+  } = useCategories({ 
+    isActive: true,
+    sortBy: 'name',
+    sortDirection: 'asc'
+  }, 'teacher');
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [creatingCategory, setCreatingCategory] = useState(false);
 
   // Inicializar el primer módulo cuando se cambia a vista previa
+  // Función para sincronizar datos básicos del curso con el backend (con debounce)
+  const updateCourseBasicDataDebounced = useRef(
+    debounce(async (courseId: number, courseData: any) => {
+      try {
+        await courseService.updateCourse(courseId, {
+          title: courseData.title,
+          description: courseData.description,
+          shortDescription: courseData.shortDescription,
+          difficulty_level: courseData.difficulty_level,
+          duration_hours: courseData.duration_hours,
+          bannerImage: courseData.bannerImage,
+          learningObjectives: courseData.learningObjectives,
+          prerequisites: courseData.prerequisites,
+          categoryId: courseData.categoryId
+        });
+
+        logger.debug('✅ Datos básicos del curso actualizados');
+      } catch (error) {
+        logger.error('❌ Error actualizando datos básicos del curso:', error);
+      }
+    }, 2000) // 2 segundos de debounce
+  ).current;
+
+  const updateCourseBasicData = useCallback(() => {
+    if (!currentCourseId || !courseCreated) return;
+    updateCourseBasicDataDebounced(currentCourseId, courseData);
+  }, [currentCourseId, courseCreated, courseData, updateCourseBasicDataDebounced]);
+
   useEffect(() => {
     if (activeTab === 'preview' && builderData?.modules?.length > 0 && !previewCurrentModuleId) {
       setPreviewCurrentModuleId(builderData.modules[0].id);
     }
   }, [activeTab, builderData?.modules?.length, previewCurrentModuleId]);
 
-  // Auto-save functionality
+  // Actualizar datos de auto-guardado cuando cambien los datos del curso o builder
   useEffect(() => {
-    if (isDirty && courseData.title) {
-      const timer = setTimeout(() => {
-        saveDraft();
-      }, 2000);
-      return () => clearTimeout(timer);
+    if (courseCreated && (courseData.title || builderData)) {
+      const draftData = {
+        courseData,
+        builderData,
+        timestamp: new Date().toISOString()
+      };
+      
+      autoSave.updateData(draftData);
+      if (isDirty) {
+        autoSave.notifyChange(true); // Cambio sustancial
+        // También actualizar los datos básicos del curso en el backend
+        updateCourseBasicData();
+      }
     }
-  }, [courseData, isDirty]);
+  }, [courseData, builderData, isDirty, courseCreated, updateCourseBasicData]);
 
   // Warn before leaving if there are unsaved changes
   useEffect(() => {
@@ -131,71 +185,74 @@ export const CreateCoursePage: React.FC = () => {
   }, [isDirty]);
 
   const saveDraft = async () => {
-    if (!courseData.title) return;
+    if (!currentCourseId || !courseCreated) {
+      logger.warn('⚠️ No se puede guardar: curso no creado');
+      return;
+    }
     
     setSaving(true);
     try {
-      localStorage.setItem('course_draft', JSON.stringify(courseData));
-      setIsDirty(false);
+      await autoSave.forceSave();
+      logger.success('✅ Borrador guardado manualmente');
     } catch (error) {
-      console.error('Error saving draft:', error);
+      logger.error('❌ Error guardando borrador manual:', error);
     } finally {
       setSaving(false);
     }
   };
 
-  const loadDraft = () => {
+  const loadDraft = async () => {
+    if (!currentCourseId) return;
+    
     try {
-      const draft = localStorage.getItem('course_draft');
-      if (draft) {
-        const parsedDraft = JSON.parse(draft);
-        setCourseData(parsedDraft);
+      const draftData = await autoSave.loadLatestDraft();
+      if (draftData) {
+        if (draftData.courseData) {
+          setCourseData(draftData.courseData);
+        }
+        if (draftData.builderData) {
+          setBuilderData(draftData.builderData);
+        }
+        logger.info('ℹ️ Borrador cargado exitosamente');
       }
     } catch (error) {
-      console.error('Error loading draft:', error);
+      logger.error('❌ Error cargando borrador:', error);
     }
   };
 
-  const validateCourse = (): string[] => {
+  const validateCourse = async (): Promise<string[]> => {
     const errors: string[] = [];
     
-    if (!courseData.title.trim()) {
-      errors.push('El título del curso es obligatorio');
+    // Validar datos básicos del curso usando el sistema centralizado
+    const isBasicDataValid = await courseValidation.validateAll();
+    if (!isBasicDataValid) {
+      Object.values(courseValidation.errors).forEach(fieldErrors => {
+        errors.push(...fieldErrors);
+      });
     }
     
-    if (!courseData.description.trim()) {
-      errors.push('La descripción del curso es obligatoria');
-    }
-    
-    if (courseData.modules.length === 0) {
+    // Validar estructura del constructor (módulos y componentes)
+    if (!builderData?.modules || builderData.modules.length === 0) {
       errors.push('El curso debe tener al menos un módulo');
     }
     
-    courseData.modules.forEach((module, moduleIndex) => {
-      if (!module.title.trim()) {
-        errors.push(`El módulo ${moduleIndex + 1} debe tener un título`);
-      }
-      
-      if (module.lessons.length === 0) {
-        errors.push(`El módulo "${module.title}" debe tener al menos una lección`);
-      }
-      
-      module.lessons.forEach((lesson, lessonIndex) => {
-        if (!lesson.title.trim()) {
-          errors.push(`La lección ${lessonIndex + 1} del módulo "${module.title}" debe tener un título`);
+    if (builderData?.modules) {
+      builderData.modules.forEach((module: any, moduleIndex: number) => {
+        if (!module.title?.trim()) {
+          errors.push(`El módulo ${moduleIndex + 1} debe tener un título`);
         }
         
-        if (lesson.content.length === 0) {
-          errors.push(`La lección "${lesson.title}" debe tener contenido`);
+        if (!module.components || module.components.length === 0) {
+          errors.push(`El módulo "${module.title || `Módulo ${moduleIndex + 1}`}" debe tener al menos un componente`);
         }
       });
-    });
+    }
     
     return errors;
   };
 
-  const handlePublish = () => {
-    const errors = validateCourse();
+  const handlePublish = async () => {
+    const errors = await validateCourse();
     setValidationErrors(errors);
     
     if (errors.length === 0) {
@@ -208,83 +265,280 @@ export const CreateCoursePage: React.FC = () => {
     navigate('/teacher/dashboard');
   };
 
-  const updateCourseData = (updates: Partial<CourseData>) => {
-    setCourseData(prev => ({ ...prev, ...updates }));
+  const updateCourseData = (updates: Partial<CourseFormData>) => {
+    const newData = { ...courseData, ...updates };
+    setCourseData(newData);
+    
+    // Sincronizar con el sistema de validación
+    courseValidation.setData({
+      title: newData.title,
+      description: newData.description,
+      difficulty_level: newData.difficulty_level,
+      duration_hours: newData.duration_hours,
+      learningObjectives: newData.learningObjectives,
+      prerequisites: newData.prerequisites
+    });
+    
     setIsDirty(true);
   };
 
-  // Manejar subida de banner
-  const handleBannerUpload = async (file: File) => {
-    if (!file) return;
+  // Función para manejar cambios en los datos del constructor
+  const handleBuilderDataChange = async (data: any) => {
+    setBuilderData(data);
+    setIsDirty(true);
     
-    // Validar tipo de archivo
-    if (!file.type.startsWith('image/')) {
-      alert('Solo se permiten archivos de imagen');
-      return;
+    // Sincronizar builder data con backend si el curso ya existe
+    if (currentCourseId && data) {
+      await syncBuilderDataToBackend(data);
     }
-    
-    // Validar tamaño (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('La imagen no puede ser mayor a 5MB');
-      return;
-    }
-    
-    setUploadingBanner(true);
+  };
+
+  // Función para sincronizar los datos del builder con la base de datos
+  const syncBuilderDataToBackend = async (builderData: any) => {
+    if (!currentCourseId || !builderData?.modules) return;
+
     try {
-      // Simular subida de archivo - en la app real usarías uploadService
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      logger.debug('🔄 Sincronizando builder data con backend...');
       
-      // Crear URL temporal para previsualización
-      const imageUrl = URL.createObjectURL(file);
-      updateCourseData({ banner_image: imageUrl });
+      // Procesar cada módulo
+      for (const module of builderData.modules) {
+        // Si el módulo no tiene backendModuleId, crearlo
+        if (!module.backendModuleId) {
+          try {
+            const unitResult = await courseService.createUnit(currentCourseId, {
+              title: module.title || 'Unidad sin título',
+              description: module.description || '',
+              order: module.order || 0
+            });
+            
+            if (unitResult.success && unitResult.unit?.id) {
+              // Crear módulo dentro de la unidad
+              const moduleResult = await courseService.createModule(unitResult.unit.id, {
+                title: module.title || 'Módulo sin título',
+                description: module.description || '',
+                order: 0
+              });
+              
+              if (moduleResult.success && moduleResult.module?.id) {
+                module.backendModuleId = moduleResult.module.id;
+              }
+            }
+          } catch (error) {
+            logger.error('❌ Error creando módulo en backend:', error);
+          }
+        }
+
+        // Procesar componentes del módulo
+        if (module.components && module.backendModuleId) {
+          for (const component of module.components) {
+            if (!component.backendComponentId) {
+              try {
+                const componentResult = await courseService.createComponent(module.backendModuleId, {
+                  type: component.type,
+                  title: component.title || 'Componente sin título',
+                  content: component.content || {},
+                  order: component.order || 0
+                });
+                
+                if (componentResult.success && componentResult.component?.id) {
+                  component.backendComponentId = componentResult.component.id;
+                }
+              } catch (error) {
+                logger.error('❌ Error creando componente en backend:', error);
+              }
+            }
+          }
+        }
+      }
       
-      logger.info('Banner uploaded successfully');
+      logger.debug('✅ Sincronización completada');
     } catch (error) {
-      logger.error('Error uploading banner:', error);
-      alert('Error al subir la imagen');
+      logger.error('❌ Error sincronizando builder data:', error);
+    }
+  };
+
+  // Manejar subida de banner usando FileUploadSection
+  const handleBannerUpload = (fileUrl: string, metadata?: any) => {
+    updateCourseData({ bannerImage: fileUrl });
+    logger.success('✅ Banner subido exitosamente');
+  };
+
+  const removeBanner = () => {
+    updateCourseData({ bannerImage: undefined });
+    logger.info('🗑️ Banner eliminado');
+  };
+
+  // Validar configuración completa usando el sistema centralizado
+  const validateSettings = async (): Promise<string[]> => {
+    // Actualizar datos de validación
+    courseValidation.setData({
+      title: courseData.title,
+      description: courseData.description,
+      difficulty_level: courseData.difficulty_level,
+      duration_hours: courseData.duration_hours,
+      learningObjectives: courseData.learningObjectives,
+      prerequisites: courseData.prerequisites
+    });
+    
+    // Ejecutar validación
+    const isValid = await courseValidation.validateAll();
+    
+    if (!isValid) {
+      return Object.values(courseValidation.errors).flat();
+    }
+    
+    return [];
+  };
+
+  // Funciones para manejar categorías con validación inteligente
+  const addNewCategory = async () => {
+    if (!newCategoryName.trim() || creatingCategory) return;
+    
+    const rawInput = newCategoryName.trim();
+    logger.debug('🔍 Analizando nueva categoría:', rawInput);
+    logger.debug('📚 Categorías disponibles:', categories.map(c => c.name));
+    
+    // Análisis inteligente del nombre antes de crear
+    const normalizedName = normalizeAndValidateCategoryName(rawInput);
+    logger.debug('✨ Nombre normalizado:', normalizedName);
+    
+    // Verificar si ya existe una categoría similar ANTES de enviar al backend
+    const existingCategory = findSimilarCategory(normalizedName);
+    if (existingCategory) {
+      logger.debug('🎯 Categoría similar encontrada:', existingCategory.name);
+      const confirmMessage = `Ya existe una categoría similar: "${existingCategory.name}". 
+      
+¿Qué deseas hacer?
+- OK: Usar la categoría existente "${existingCategory.name}"
+- Cancelar: No crear ninguna categoría`;
+      
+      if (window.confirm(confirmMessage)) {
+        // Usuario eligió usar la categoría existente
+        updateCourseData({ categoryId: existingCategory.id });
+        setNewCategoryName('');
+        setShowNewCategoryInput(false);
+        logger.success('✅ Categoría existente seleccionada:', existingCategory.name);
+        return;
+      } else {
+        // Usuario eligió cancelar completamente
+        logger.debug('🚫 Usuario canceló la creación de categoría');
+        setNewCategoryName('');
+        setShowNewCategoryInput(false);
+        return; // Salir sin crear nada
+      }
+    }
+    
+    setCreatingCategory(true);
+    try {
+      logger.debug('🚀 Creando nueva categoría en backend:', normalizedName);
+      const newCategory = await createCategory({
+        name: normalizedName,
+        isActive: true
+      });
+      
+      // Verificar que la categoría fue creada exitosamente
+      if (newCategory && newCategory.id) {
+        // Seleccionar automáticamente la nueva categoría
+        updateCourseData({ categoryId: newCategory.id });
+        setNewCategoryName('');
+        setShowNewCategoryInput(false);
+        
+        logger.success('✅ Categoría creada exitosamente:', newCategory.name);
+      } else {
+        throw new Error('La categoría no se pudo crear correctamente');
+      }
+    } catch (error) {
+      logger.error('❌ Error al crear categoría:', error);
+      
+      // Mostrar el mensaje de error específico si está disponible
+      const errorMessage = error instanceof Error ? error.message : 'Error al crear la categoría';
+      alert(errorMessage);
     } finally {
-      setUploadingBanner(false);
+      setCreatingCategory(false);
     }
   };
 
-  // Validar configuración completa
-  const validateSettings = (): string[] => {
-    const errors: string[] = [];
-    
-    if (!courseData.title.trim()) {
-      errors.push('El título del curso es obligatorio');
-    }
-    
-    if (!courseData.description.trim()) {
-      errors.push('La descripción del curso es obligatoria');
-    }
-    
-    if (courseData.description.length < 50) {
-      errors.push('La descripción debe tener al menos 50 caracteres');
-    }
-    
-    
-    if (courseData.learning_objectives.length === 0) {
-      errors.push('Debe definir al menos un objetivo de aprendizaje');
-    }
-    
-    if (courseData.learning_objectives.some(obj => !obj.trim())) {
-      errors.push('Los objetivos de aprendizaje no pueden estar vacíos');
-    }
-    
-    return errors;
+  // Función para normalizar y validar nombres de categorías
+  const normalizeAndValidateCategoryName = (name: string): string => {
+    // Capitalizar primera letra de cada palabra y convertir el resto a minúsculas
+    return name
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+      .trim();
   };
 
-  // Funciones para manejar categorías
-  const addNewCategory = () => {
-    if (newCategoryName.trim()) {
-      const newId = Math.max(...categories.map(c => c.id)) + 1;
-      const newCategory = { id: newId, name: newCategoryName.trim() };
-      setCategories([...categories, newCategory]);
-      setCourseData({ ...courseData, category_id: newId });
-      setNewCategoryName('');
-      setShowNewCategoryInput(false);
+  // Función para encontrar categorías similares (análisis inteligente)
+  const findSimilarCategory = (name: string) => {
+    const normalizedInput = name.toLowerCase().replace(/\s+/g, ' ').trim();
+    
+    return categories.find(category => {
+      const normalizedCategory = category.name.toLowerCase().replace(/\s+/g, ' ').trim();
+      
+      // Comparación exacta
+      if (normalizedCategory === normalizedInput) return true;
+      
+      // Comparación sin espacios
+      if (normalizedCategory.replace(/\s/g, '') === normalizedInput.replace(/\s/g, '')) return true;
+      
+      // Verificar si el input está contenido en la categoría (ej: "art" en "arte y música")
+      if (normalizedCategory.includes(normalizedInput) || normalizedInput.includes(normalizedCategory)) return true;
+      
+      // Verificar por palabras individuales (ej: "art" similar a "arte")
+      const inputWords = normalizedInput.split(' ');
+      const categoryWords = normalizedCategory.split(' ');
+      
+      for (const inputWord of inputWords) {
+        for (const categoryWord of categoryWords) {
+          if (inputWord.length >= 3 && categoryWord.length >= 3) {
+            const wordSimilarity = calculateStringSimilarity(inputWord, categoryWord);
+            if (wordSimilarity > 0.75) return true;
+          }
+        }
+      }
+      
+      // Comparación con similaridad alta (al menos 80% de coincidencia completa)
+      const similarity = calculateStringSimilarity(normalizedCategory, normalizedInput);
+      return similarity > 0.80;
+    });
+  };
+
+  // Función para calcular similaridad entre strings
+  const calculateStringSimilarity = (str1: string, str2: string): number => {
+    const longer = str1.length > str2.length ? str1 : str2;
+    const shorter = str1.length > str2.length ? str2 : str1;
+    
+    if (longer.length === 0) return 1.0;
+    
+    const distance = levenshteinDistance(longer, shorter);
+    return (longer.length - distance) / longer.length;
+  };
+
+  // Algoritmo de Levenshtein para calcular distancia entre strings
+  const levenshteinDistance = (str1: string, str2: string): number => {
+    const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
+    
+    for (let i = 0; i <= str1.length; i += 1) {
+      matrix[0][i] = i;
     }
+    
+    for (let j = 0; j <= str2.length; j += 1) {
+      matrix[j][0] = j;
+    }
+    
+    for (let j = 1; j <= str2.length; j += 1) {
+      for (let i = 1; i <= str1.length; i += 1) {
+        const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
+        matrix[j][i] = Math.min(
+          matrix[j][i - 1] + 1,
+          matrix[j - 1][i] + 1,
+          matrix[j - 1][i - 1] + indicator
+        );
+      }
+    }
+    
+    return matrix[str2.length][str1.length];
   };
 
   const cancelNewCategory = () => {
@@ -292,9 +546,47 @@ export const CreateCoursePage: React.FC = () => {
     setShowNewCategoryInput(false);
   };
 
+  // Crear objeto Course para vista previa
+  const createPreviewCourse = (): Course => {
+    const selectedCategory = categories.find(cat => cat.id === courseData.categoryId);
+    
+    return {
+      id: 0, // ID temporal para preview
+      title: courseData.title || 'Título del curso',
+      description: courseData.description || 'Descripción del curso',
+      bannerImage: courseData.bannerImage || null,
+      category: selectedCategory || null,
+      teacher: user ? {
+        id: user.id,
+        firstName: user.firstName || 'Profesor',
+        lastName: user.lastName || 'Ejemplo',
+        email: user.email,
+        bio: 'Instructor de VanguardIA'
+      } : null,
+      level: courseData.difficulty_level as CourseDifficulty || CourseDifficulty.BEGINNER,
+      status: 'draft' as CourseStatus,
+      duration: (courseData.duration_hours || 0) * 60, // Convertir a minutos
+      learningObjectives: courseData.learningObjectives || [],
+      requirements: courseData.prerequisites || [],
+      language: 'es',
+      enrollmentCount: 0,
+      averageRating: undefined,
+      totalUnits: builderData?.units?.length || 0,
+      units: builderData?.units || [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      publishedAt: null
+    };
+  };
+
+  // Función para mostrar vista previa
+  const handleShowPreview = () => {
+    setShowPreviewModal(true);
+  };
+
   // Guardar configuración
   const saveSettings = async () => {
-    const errors = validateSettings();
+    const errors = await validateSettings();
     setValidationErrors(errors);
     
     if (errors.length > 0) {
@@ -303,12 +595,125 @@ export const CreateCoursePage: React.FC = () => {
     
     setSaving(true);
     try {
-      await saveDraft();
-      logger.info('Course settings saved successfully');
-      // Mostrar notificación de éxito
+      // Si el curso no está creado aún, crearlo primero
+      if (!courseCreated) {
+        await createCourse(true); // Cambiar automáticamente a la pestaña Constructor
+        logger.success('✅ Course created and settings saved successfully');
+      } else {
+        // Si ya está creado, solo guardar cambios
+        await saveDraft();
+        logger.success('✅ Course settings saved successfully');
+      }
     } catch (error) {
-      logger.error('Error saving settings:', error);
+      logger.error('❌ Error saving settings:', error);
       alert('Error al guardar la configuración');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Lógica de habilitación de pestañas
+  const isTabEnabled = (tabId: TabId): boolean => {
+    if (tabId === 'settings') return true;
+    return courseCreated; // Builder y Preview solo después de crear curso
+  };
+
+  // Función para crear curso
+  const createCourse = async (switchToBuilder: boolean = true): Promise<void> => {
+    const validation = CourseValidator.validateCreation(courseData);
+    if (!validation.isValid) {
+      setValidationErrors(validation.errors);
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const result = await courseService.createCourse(courseData);
+      
+      if (result.success && result.course) {
+        setCurrentCourseId(result.course.id);
+        setCourseCreated(true);
+        
+        // Inicializar builderData directamente con la estructura del curso del backend
+        setBuilderData({
+          id: result.course.id,
+          title: result.course.title,
+          description: result.course.description,
+          modules: result.course.units || [] // Los "units" del backend son "modules" en el frontend
+        });
+        
+        if (switchToBuilder) {
+          setActiveTab('builder'); // Cambiar automáticamente al builder solo si se especifica
+        }
+        
+        // NO cargar borrador automáticamente en cursos nuevos para evitar conflictos
+        // El usuario puede cargar manualmente si necesita un borrador específico
+        
+        logger.success('✅ Curso creado exitosamente', { courseId: result.course.id });
+        setValidationErrors([]);
+      } else {
+        throw new Error(result.message || 'Error creando curso');
+      }
+    } catch (error) {
+      logger.error('❌ Error creando curso:', error);
+      setValidationErrors([error instanceof Error ? error.message : 'Error inesperado']);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  // Función para publicar curso
+  const handlePublishCourse = async (): Promise<void> => {
+    if (!currentCourseId) return;
+
+    // Validar que el curso esté completo para publicación
+    const validation = await validateCourse();
+    if (validation.length > 0) {
+      setValidationErrors(validation);
+      setShowPublishModal(true);
+      return;
+    }
+
+    setPublishing(true);
+    try {
+      // Forzar guardado y sincronización antes de publicar
+      await autoSave.forceSave();
+      
+      // Sincronizar builder data con backend si existe
+      if (builderData) {
+        await syncBuilderDataToBackend(builderData);
+      }
+      
+      await courseService.publishCourse(currentCourseId);
+      
+      logger.success('✅ Curso publicado exitosamente');
+      navigate('/teacher/courses');
+    } catch (error) {
+      logger.error('❌ Error publicando curso:', error);
+      alert('Error al publicar el curso');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  // Función mejorada para guardar y salir
+  const handleSaveAndExitNew = async (): Promise<void> => {
+    setSaving(true);
+    try {
+      if (courseCreated && currentCourseId) {
+        // Si hay curso creado, forzar guardado de borrador
+        // Aquí se integrará el sistema híbrido de auto-guardado
+        await saveDraft();
+      } else {
+        // Si no hay curso creado, guardar en localStorage
+        localStorage.setItem('course_draft', JSON.stringify(courseData));
+      }
+      
+      logger.success('✅ Cambios guardados');
+      navigate('/teacher/dashboard');
+    } catch (error) {
+      logger.error('❌ Error guardando:', error);
+      alert('Error al guardar los cambios');
     } finally {
       setSaving(false);
     }
@@ -439,7 +844,7 @@ export const CreateCoursePage: React.FC = () => {
             courseData={courseData}
             onUpdate={updateCourseData}
             validationErrors={validationErrors}
-            onBuilderDataChange={setBuilderData}
+            onBuilderDataChange={handleBuilderDataChange}
           />
         );
       case 'preview':
@@ -649,15 +1054,27 @@ export const CreateCoursePage: React.FC = () => {
               </div>
               
               <div className="flex items-center space-x-3">
-                <Button
-                  onClick={saveSettings}
-                  variant="primary"
-                  disabled={saving}
-                  leftIcon={saving ? undefined : <Save className="w-4 h-4" />}
-                  loading={saving}
-                >
-                  {saving ? 'Guardando...' : 'Guardar Cambios'}
-                </Button>
+                {!courseCreated ? (
+                  <Button
+                    onClick={createCourse}
+                    variant="primary"
+                    disabled={creating || !courseData.title || !courseData.description}
+                    leftIcon={creating ? undefined : <Plus className="w-4 h-4" />}
+                    loading={creating}
+                  >
+                    {creating ? 'Creando...' : 'Crear Curso'}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={saveSettings}
+                    variant="primary"
+                    disabled={saving}
+                    leftIcon={saving ? undefined : <Save className="w-4 h-4" />}
+                    loading={saving}
+                  >
+                    {saving ? 'Guardando...' : 'Guardar Cambios'}
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -685,50 +1102,16 @@ export const CreateCoursePage: React.FC = () => {
                 <h3 className="text-lg font-semibold">Imagen del Curso</h3>
               </div>
               
-              <div className="space-y-4">
-                {courseData.banner_image ? (
-                  <div className="relative">
-                    <img
-                      src={courseData.banner_image}
-                      alt="Banner del curso"
-                      className="w-full h-48 object-cover rounded-lg"
-                    />
-                    <button
-                      onClick={() => updateCourseData({ banner_image: undefined })}
-                      className="absolute top-2 right-2 p-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
-                      title="Eliminar imagen"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                    <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 mb-4">Sube una imagen atractiva para tu curso</p>
-                    <label className="cursor-pointer">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => e.target.files?.[0] && handleBannerUpload(e.target.files[0])}
-                        className="hidden"
-                        disabled={uploadingBanner}
-                      />
-                      <Button
-                        variant="outline"
-                        disabled={uploadingBanner}
-                        leftIcon={uploadingBanner ? undefined : <Upload className="w-4 h-4" />}
-                        loading={uploadingBanner}
-                        as="span"
-                      >
-                        {uploadingBanner ? 'Subiendo...' : 'Seleccionar Imagen'}
-                      </Button>
-                    </label>
-                  </div>
-                )}
-                <p className="text-sm text-gray-500">
-                  Recomendado: 1920x1080px, máximo 5MB. Formatos: JPG, PNG, WebP
-                </p>
-              </div>
+              <FileUploadSection
+                fileUrl={courseData.bannerImage}
+                onUploadComplete={handleBannerUpload}
+                onRemoveFile={removeBanner}
+                fileType="image"
+                label="Imagen del Curso (Banner)"
+                required={false}
+                allowFullscreen={true}
+                previewClassName="w-full h-48 object-cover rounded-lg shadow-sm"
+              />
             </div>
 
             {/* Información básica */}
@@ -759,7 +1142,7 @@ export const CreateCoursePage: React.FC = () => {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Descripción de la ción *
+                    Descripción del curso *
                   </label>
                   <textarea
                     value={courseData.description}
@@ -777,23 +1160,35 @@ export const CreateCoursePage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Categoría del curso
                     </label>
                     <div className="space-y-2">
                       <select
-                        value={courseData.category_id || ''}
-                        onChange={(e) => updateCourseData({ category_id: e.target.value ? parseInt(e.target.value) : null })}
+                        value={courseData.categoryId || ''}
+                        onChange={(e) => updateCourseData({ categoryId: e.target.value ? parseInt(e.target.value) : null })}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        disabled={categoriesLoading}
                       >
                         <option value="">Seleccionar categoría</option>
                         {categories.map(category => (
                           <option key={category.id} value={category.id}>{category.name}</option>
                         ))}
                       </select>
+                      {categoriesLoading && (
+                        <div className="mt-1 text-xs text-gray-500">
+                          Cargando categorías...
+                        </div>
+                      )}
+                      {categoriesError && (
+                        <div className="mt-1 text-xs text-red-500">
+                          Error al cargar categorías
+                        </div>
+                      )}
                       
+                      {/* Los profesores pueden crear categorías durante la creación de cursos */}
                       {!showNewCategoryInput ? (
                         <button
                           type="button"
@@ -803,7 +1198,7 @@ export const CreateCoursePage: React.FC = () => {
                           <Plus className="w-4 h-4" />
                           Añadir nueva categoría
                         </button>
-                      ) : (
+                      ) : showNewCategoryInput ? (
                         <div className="border border-gray-300 rounded-lg p-3 bg-gray-50">
                           <label className="block text-xs font-medium text-gray-700 mb-2">
                             Nueva categoría
@@ -828,10 +1223,14 @@ export const CreateCoursePage: React.FC = () => {
                             <button
                               type="button"
                               onClick={addNewCategory}
-                              disabled={!newCategoryName.trim()}
+                              disabled={!newCategoryName.trim() || creatingCategory}
                               className="px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              <CheckCircle className="w-4 h-4" />
+                              {creatingCategory ? (
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <CheckCircle className="w-4 h-4" />
+                              )}
                             </button>
                             <button
                               type="button"
@@ -842,8 +1241,33 @@ export const CreateCoursePage: React.FC = () => {
                             </button>
                           </div>
                         </div>
-                      )}
+                      ) : null}
                     </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Duración estimada *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={courseData.duration_hours || ''}
+                        onChange={(e) => updateCourseData({ duration_hours: parseFloat(e.target.value) || 0 })}
+                        min="0.5"
+                        max="200"
+                        step="0.5"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-16"
+                        placeholder="2.5"
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+                        <Clock className="w-4 h-4 text-gray-400" />
+                        <span className="ml-1 text-sm text-gray-500">horas</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Duración total estimada del curso (ej: 2.5 horas)
+                    </p>
                   </div>
                   
                   <div>
@@ -852,12 +1276,12 @@ export const CreateCoursePage: React.FC = () => {
                     </label>
                     <select
                       value={courseData.difficulty_level}
-                      onChange={(e) => updateCourseData({ difficulty_level: e.target.value as any })}
+                      onChange={(e) => updateCourseData({ difficulty_level: e.target.value as CourseDifficulty })}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
-                      <option value="beginner">🟢 Principiante</option>
-                      <option value="intermediate">🟡 Intermedio</option>
-                      <option value="advanced">🔴 Avanzado</option>
+                      <option value={CourseDifficulty.BEGINNER}>🟢 Principiante</option>
+                      <option value={CourseDifficulty.INTERMEDIATE}>🟡 Intermedio</option>
+                      <option value={CourseDifficulty.ADVANCED}>🔴 Avanzado</option>
                     </select>
                   </div>
                 </div>
@@ -876,7 +1300,7 @@ export const CreateCoursePage: React.FC = () => {
               </p>
               
               <div className="space-y-3">
-                {courseData.learning_objectives.map((objective, index) => (
+                {courseData.learningObjectives.map((objective, index) => (
                   <div key={index} className="flex items-start space-x-3 group">
                     <div className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium mt-2">
                       {index + 1}
@@ -886,9 +1310,9 @@ export const CreateCoursePage: React.FC = () => {
                         type="text"
                         value={objective}
                         onChange={(e) => {
-                          const newObjectives = [...courseData.learning_objectives];
+                          const newObjectives = [...courseData.learningObjectives];
                           newObjectives[index] = e.target.value;
-                          updateCourseData({ learning_objectives: newObjectives });
+                          updateCourseData({ learningObjectives: newObjectives });
                         }}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="Ej: Implementar protocolos de seguridad en sus puestos de trabajo"
@@ -897,8 +1321,8 @@ export const CreateCoursePage: React.FC = () => {
                     </div>
                     <button
                       onClick={() => {
-                        const newObjectives = courseData.learning_objectives.filter((_, i) => i !== index);
-                        updateCourseData({ learning_objectives: newObjectives });
+                        const newObjectives = courseData.learningObjectives.filter((_, i) => i !== index);
+                        updateCourseData({ learningObjectives: newObjectives });
                       }}
                       className="flex-shrink-0 p-2 text-gray-400 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
                       title="Eliminar objetivo"
@@ -908,10 +1332,10 @@ export const CreateCoursePage: React.FC = () => {
                   </div>
                 ))}
                 
-                {courseData.learning_objectives.length < 8 && (
+                {courseData.learningObjectives.length < 8 && (
                   <button
                     onClick={() => updateCourseData({ 
-                      learning_objectives: [...courseData.learning_objectives, ''] 
+                      learningObjectives: [...courseData.learningObjectives, ''] 
                     })}
                     className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-colors flex items-center justify-center"
                   >
@@ -920,7 +1344,7 @@ export const CreateCoursePage: React.FC = () => {
                   </button>
                 )}
                 
-                {courseData.learning_objectives.length === 0 && (
+                {courseData.learningObjectives.length === 0 && (
                   <div className="text-center py-6 text-gray-500">
                     <Target className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                     <p>Agrega al menos un objetivo de aprendizaje</p>
@@ -1002,7 +1426,7 @@ export const CreateCoursePage: React.FC = () => {
                 <h3 className="text-lg font-semibold text-blue-900">Resumen del Curso</h3>
               </div>
               
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="text-center p-4 bg-white rounded-lg shadow-sm">
                   <BookOpen className="w-6 h-6 text-blue-600 mx-auto mb-2" />
                   <div className="text-2xl font-bold text-gray-900">{builderData?.modules?.length || 0}</div>
@@ -1019,16 +1443,22 @@ export const CreateCoursePage: React.FC = () => {
                 </div>
                 
                 <div className="text-center p-4 bg-white rounded-lg shadow-sm">
+                  <Clock className="w-6 h-6 text-indigo-600 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-gray-900">{courseData.duration_hours || 0}h</div>
+                  <div className="text-sm text-gray-600">Duración</div>
+                </div>
+                
+                <div className="text-center p-4 bg-white rounded-lg shadow-sm">
                   <Target className="w-6 h-6 text-purple-600 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-gray-900">{courseData.learning_objectives.length}</div>
+                  <div className="text-2xl font-bold text-gray-900">{courseData.learningObjectives.length}</div>
                   <div className="text-sm text-gray-600">Objetivos</div>
                 </div>
                 
                 <div className="text-center p-4 bg-white rounded-lg shadow-sm">
                   <Globe className="w-6 h-6 text-orange-600 mx-auto mb-2" />
                   <div className="text-2xl font-bold text-gray-900">
-                    {courseData.difficulty_level === 'beginner' ? '🟢' : 
-                     courseData.difficulty_level === 'intermediate' ? '🟡' : '🔴'}
+                    {courseData.difficulty_level === CourseDifficulty.BEGINNER ? '🟢' : 
+                     courseData.difficulty_level === CourseDifficulty.INTERMEDIATE ? '🟡' : '🔴'}
                   </div>
                   <div className="text-sm text-gray-600 capitalize">{courseData.difficulty_level}</div>
                 </div>
@@ -1038,10 +1468,10 @@ export const CreateCoursePage: React.FC = () => {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">Estado del curso:</span>
                   <span className={`font-medium ${
-                    courseData.title && courseData.description && courseData.learning_objectives.length > 0
+                    courseData.title && courseData.description && courseData.duration_hours > 0 && courseData.learningObjectives.length > 0
                       ? 'text-green-600' : 'text-orange-600'
                   }`}>
-                    {courseData.title && courseData.description && courseData.learning_objectives.length > 0
+                    {courseData.title && courseData.description && courseData.duration_hours > 0 && courseData.learningObjectives.length > 0
                       ? '✅ Configuración completa' : '⚠️ Configuración pendiente'}
                   </span>
                 </div>
@@ -1049,18 +1479,10 @@ export const CreateCoursePage: React.FC = () => {
             </div>
 
             {/* Botones de acción */}
-            <div className="flex justify-between items-center pt-6 border-t">
-              <Button
-                onClick={() => setActiveTab('builder')}
-                variant="outline"
-                leftIcon={<Hammer className="w-4 h-4" />}
-              >
-                Volver al Constructor
-              </Button>
-              
+            <div className="flex justify-end items-center pt-6 border-t">             
               <div className="flex space-x-3">
                 <Button
-                  onClick={() => setActiveTab('preview')}
+                  onClick={handleShowPreview}
                   variant="outline"
                   leftIcon={<Eye className="w-4 h-4" />}
                 >
@@ -1116,16 +1538,50 @@ export const CreateCoursePage: React.FC = () => {
                 </h1>
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                   <span>Instructor: {user?.name}</span>
-                  {saving && (
+                  <span>•</span>
+                  <span>
+                    {!courseCreated ? "Paso 1: Configuración básica" : "Editando contenido del curso"}
+                  </span>
+                  {/* Auto-save status indicator */}
+                  {courseCreated && autoSave.isActive && (
+                    <>
+                      <span>•</span>
+                      <div className="flex items-center gap-1">
+                        {autoSave.status === 'saving' && (
+                          <>
+                            <Loader className="w-3 h-3 animate-spin" />
+                            <span className="text-primary-600">Guardando...</span>
+                          </>
+                        )}
+                        {autoSave.status === 'saved' && (
+                          <>
+                            <CheckCircle className="w-3 h-3 text-success-600" />
+                            <span className="text-success-600">Guardado automático</span>
+                          </>
+                        )}
+                        {autoSave.status === 'error' && (
+                          <>
+                            <AlertCircle className="w-3 h-3 text-danger-600" />
+                            <span className="text-danger-600">Error guardando</span>
+                          </>
+                        )}
+                        {autoSave.status === 'idle' && isDirty && (
+                          <span className="text-accent-600">Cambios pendientes</span>
+                        )}
+                      </div>
+                    </>
+                  )}
+                  {/* Fallback for manual saving when auto-save is not active */}
+                  {(!courseCreated || !autoSave.isActive) && saving && (
                     <>
                       <span>•</span>
                       <span className="text-primary-600">Guardando...</span>
                     </>
                   )}
-                  {isDirty && !saving && (
+                  {(!courseCreated || !autoSave.isActive) && isDirty && !saving && (
                     <>
                       <span>•</span>
-                      <span className="text-acent-600">Cambios sin guardar</span>
+                      <span className="text-accent-600">Cambios sin guardar</span>
                     </>
                   )}
                 </div>
@@ -1133,22 +1589,29 @@ export const CreateCoursePage: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Botón Publicar - solo visible después de crear curso */}
+              {courseCreated && (
+                <Button
+                  variant="success"
+                  size="sm"
+                  onClick={handlePublishCourse}
+                  disabled={!currentCourseId || publishing}
+                  leftIcon={<Globe className="w-4 h-4" />}
+                  loading={publishing}
+                >
+                  {publishing ? 'Publicando...' : 'Publicar Curso'}
+                </Button>
+              )}
+              
+              {/* Botón Guardar y Salir - siempre visible */}
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleSaveAndExit}
+                onClick={handleSaveAndExitNew}
                 loading={saving}
+                leftIcon={<Save className="w-4 h-4" />}
               >
-                Guardar y Salir
-              </Button>
-              
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={handlePublish}
-                disabled={!courseData.title || courseData.modules.length === 0}
-              >
-                Publicar Curso
+                {saving ? 'Guardando...' : 'Guardar y Salir'}
               </Button>
             </div>
           </div>
@@ -1158,17 +1621,21 @@ export const CreateCoursePage: React.FC = () => {
             {TABS.map((tab) => (
               <motion.button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => isTabEnabled(tab.id) && setActiveTab(tab.id)}
+                disabled={!isTabEnabled(tab.id)}
                 className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200 ${
                   activeTab === tab.id
                     ? 'bg-primary-500 text-white'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    : isTabEnabled(tab.id)
+                    ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    : 'text-gray-400 cursor-not-allowed bg-gray-50'
                 }`}
-                whileHover={{ y: -1 }}
-                whileTap={{ y: 0 }}
+                whileHover={isTabEnabled(tab.id) ? { y: -1 } : {}}
+                whileTap={isTabEnabled(tab.id) ? { y: 0 } : {}}
               >
                 <tab.icon className="w-4 h-4 mr-2" />
                 {tab.label}
+                {!isTabEnabled(tab.id) && <Lock className="w-3 h-3 ml-1" />}
               </motion.button>
             ))}
           </div>
@@ -1270,6 +1737,14 @@ export const CreateCoursePage: React.FC = () => {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Modal de Vista Previa */}
+      <CoursePreviewModal
+        isOpen={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+        course={createPreviewCourse()}
+        title="Vista Previa del Curso"
+      />
     </DashboardLayout>
   );
 };

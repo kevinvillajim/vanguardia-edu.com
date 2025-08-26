@@ -1,4 +1,4 @@
-import { Input } from "@/shared/components/ui";
+import { Input } from "@/shared/components/atoms";
 import FormField from "./FormField";
 import PropTypes from "prop-types";
 

@@ -57,33 +57,13 @@ export interface ApiError {
   errors?: Record<string, string[]>;
 }
 
-// Course types
-export interface Course {
-  id: number;
-  title: string;
-  slug: string;
-  description: string;
-  banner_image?: string;
-  duration_hours: number;
-  total_lessons: number;
-  difficulty_level: 'beginner' | 'intermediate' | 'advanced';
-  rating: number;
-  enrollment_count: number;
-  is_featured: boolean;
-  teacher: {
-    id: number;
-    name: string;
-    avatar?: string;
-  };
-  category?: {
-    id: number;
-    name: string;
-  };
-}
+// Import Course types from domain (eliminamos duplicación)
+// Los tipos de Course ahora se importan desde domain/entities/Course.ts
 
 export interface CourseFilters {
-  difficulty_level?: string;
-  sort_by?: string;
-  per_page?: number;
+  difficulty?: CourseDifficulty;
+  sortBy?: string;
+  perPage?: number;
   page?: number;
+  categoryId?: number;
 }

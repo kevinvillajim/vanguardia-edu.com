@@ -1,6 +1,8 @@
 import { ICourseRepository } from '../../domain/repositories/ICourseRepository';
 import { Course, CreateCourseData } from '../../domain/entities/Course';
 import { UserRole } from '../../shared/types';
+import { CourseValidator } from '../../shared/validation';
+import { logger } from '../../shared/utils/logger';
 
 export class CreateCourseUseCase {
   constructor(private courseRepository: ICourseRepository) {}
@@ -31,39 +33,21 @@ export class CreateCourseUseCase {
   }
 
   private validateCourseData(courseData: CreateCourseData): void {
-    // Validar título
-    if (!courseData.title || courseData.title.trim().length < 5) {
-      throw new Error('El título de la curso debe tener al menos 5 caracteres');
+    logger.debug('🔍 Validating course data:', courseData);
+    
+    // Usar validación de creación (sin objetivos obligatorios)
+    const validationResult = CourseValidator.validateCreation(courseData);
+    
+    if (!validationResult.isValid) {
+      const firstError = validationResult.errors[0];
+      logger.warn('❌ Course validation failed:', {
+        errors: validationResult.errors,
+        fieldErrors: validationResult.fieldErrors
+      });
+      throw new Error(firstError);
     }
-
-    if (courseData.title.length > 100) {
-      throw new Error('El título de la curso no puede exceder 100 caracteres');
-    }
-
-    // Validar descripción
-    if (!courseData.description || courseData.description.trim().length < 20) {
-      throw new Error('La descripción de la curso debe tener al menos 20 caracteres');
-    }
-
-    if (courseData.description.length > 5000) {
-      throw new Error('La descripción de la curso no puede exceder 5000 caracteres');
-    }
-
-
-    // Validar duración
-    if (courseData.durationHours <= 0) {
-      throw new Error('La duración debe ser mayor a 0 horas');
-    }
-
-    if (courseData.durationHours > 1000) {
-      throw new Error('La duración no puede exceder 1000 horas');
-    }
-
-    // Validar dificultad
-    const validDifficulties = ['beginner', 'intermediate', 'advanced'];
-    if (!validDifficulties.includes(courseData.difficulty)) {
-      throw new Error('Nivel de dificultad inválido');
-    }
+    
+    logger.success('✅ Course data validation passed');
   }
 
   private handleCreateCourseError(error: any): Error {

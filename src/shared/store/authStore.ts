@@ -22,6 +22,8 @@ interface AuthState {
   register: (userData: CreateUserData) => Promise<AuthResponse>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  checkAuth: () => Promise<void>;
+  updateUser: (userData: Partial<User>) => Promise<void>;
   clearError: () => void;
   setLoading: (loading: boolean) => void;
   
@@ -31,6 +33,7 @@ interface AuthState {
   // Internal actions
   setAuth: (user: User, token: string) => void;
   clearAuth: () => void;
+  reset?: () => void;
 }
 
 // Initialize repositories and use cases
@@ -136,6 +139,44 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      checkAuth: async () => {
+        try {
+          const { token } = get();
+          if (!token) {
+            get().clearAuth();
+            return;
+          }
+          
+          set({ isLoading: true });
+          const user = await userRepository.getCurrentUser();
+          set({ user, isAuthenticated: true });
+          
+          logger.auth('✅ Auth check successful');
+        } catch (error: any) {
+          logger.auth('❌ Auth check failed:', error);
+          get().clearAuth();
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      updateUser: async (userData: Partial<User>) => {
+        try {
+          set({ isLoading: true, error: null });
+          
+          const updatedUser = await userRepository.updateUser(userData);
+          set({ user: updatedUser });
+          
+          logger.auth('✅ User updated successfully');
+        } catch (error: any) {
+          set({ error: error.message || 'Error updating user' });
+          logger.auth('❌ Error updating user:', error);
+          throw error;
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
       clearError: () => set({ error: null }),
       
       setLoading: (loading: boolean) => set({ isLoading: loading }),
@@ -178,6 +219,16 @@ export const useAuthStore = create<AuthState>()(
         // Clear localStorage
         localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
         localStorage.removeItem(STORAGE_KEYS.USER_DATA);
+      },
+
+      reset: () => {
+        set({
+          user: null,
+          token: null,
+          isAuthenticated: false,
+          isLoading: false,
+          error: null,
+        });
       },
     }),
     {

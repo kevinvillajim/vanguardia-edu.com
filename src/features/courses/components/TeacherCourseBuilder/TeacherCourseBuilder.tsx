@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { motion } from 'framer-motion';
@@ -11,8 +11,23 @@ import {
 import { useAuthStore } from '../../../../shared/store/authStore';
 import { useCourseCreation } from '../../../../shared/hooks/useCourseCreation';
 import { useAutoSave } from '../../../../shared/hooks/useAutoSave';
-import { CreateCourseData, CourseUnit, CourseModule, CourseComponent } from '../../../../domain/entities/Course';
+import { CreateCourseData, CourseUnit, CourseModule, CourseComponent, ComponentType } from '../../../../domain/entities/Course';
 import { CreateUnitData, CreateModuleData, CreateComponentData } from '../../../../domain/repositories/ICourseRepository';
+import { 
+  BackendId, 
+  FrontendId, 
+  isTemporaryId, 
+  isBackendId, 
+  backendIdToString, 
+  stringIdToBackend,
+  generateTemporaryId,
+  extractBackendId,
+  IdMapper,
+  validateBackendId,
+  moduleIdUtils,
+  componentIdUtils,
+  ID_PREFIXES
+} from '../../../../shared/utils/idUtils';
 import { courseService } from '../../../../services/courseService';
 import { uploadService } from '../../../../services/uploadService';
 import { CourseData, ModuleData, LessonData, LessonContent } from '../../pages/CoursesCatalogPage';
@@ -31,7 +46,7 @@ import { progressService } from '../../../../services/progressService';
 import { logger } from '../../../../shared/utils/logger';
 
 interface ComponentItem {
-  id: string;
+  id: FrontendId; // String para IDs temporales, convertible a number para backend
   type: string;
   title: string;
   content?: string;
@@ -40,10 +55,14 @@ interface ComponentItem {
   isMandatory: boolean;
   order: number;
   metadata?: any;
+  backendComponentId?: BackendId; // ID real del Component en el backend
 }
 
+// TRANSICIÓN: Mantener compatibilidad pero mapear correctamente al backend
+// Los "modules" del builder representan Units del backend
+// Cada "module" tendrá un módulo por defecto internamente
 interface Module {
-  id: string;
+  id: FrontendId; // String para builder, convertible a number para backend
   title: string;
   subtitle?: string;
   description: string;
@@ -51,8 +70,9 @@ interface Module {
   components: ComponentItem[];
   quiz?: any;
   order: number;
-  unitId?: number; // ID de la unidad en el backend
-  enableSmartProgress?: boolean; // Sistema de prerrequisitos inteligentes
+  backendUnitId?: BackendId; // ID real de la Unit en el backend
+  backendModuleId?: BackendId; // ID real del Module en el backend
+  enableSmartProgress?: boolean;
 }
 
 interface Activity {
@@ -71,28 +91,31 @@ interface Course {
   id?: string;
   title: string;
   description: string;
-  modules: Module[];
+  modules: Module[]; // Mantener nombre pero representa Units del backend
   activities: Activity[];
 }
 
 interface TeacherCourseBuilderProps {
-  courseData: CourseData;
-  onUpdate: (updates: Partial<CourseData>) => void;
+  courseData: CourseFormData;
+  onUpdate: (updates: Partial<CourseFormData>) => void;
   validationErrors: string[];
   onBuilderDataChange?: (builderData: Course) => void;
+  existingCourseId?: number | null; // ID del curso existente para modo edición
+  initialBuilderData?: any; // Datos iniciales del builder para modo edición
 }
 
 // Tipos de componentes disponibles
-const ComponentTypes = {
-  BANNER: 'banner',
-  VIDEO: 'video',
-  READING: 'reading',
-  IMAGE: 'image',
-  DOCUMENT: 'document',
-  AUDIO: 'audio',
-  QUIZ: 'quiz',
-  ACTIVITY: 'activity'
-};
+// Mapeo de tipos de componentes del builder a ComponentType enum
+const BUILDER_COMPONENT_TYPES = {
+  BANNER: 'banner',       // Se mapea a ComponentType.TEXT
+  VIDEO: 'video',         // Se mapea a ComponentType.VIDEO  
+  READING: 'reading',     // Se mapea a ComponentType.TEXT
+  IMAGE: 'image',         // Se mapea a ComponentType.TEXT
+  DOCUMENT: 'document',   // Se mapea a ComponentType.RESOURCE
+  AUDIO: 'audio',         // Se mapea a ComponentType.RESOURCE
+  QUIZ: 'quiz',          // Se mapea a ComponentType.QUIZ
+  ACTIVITY: 'activity'    // Se mapea a ComponentType.ASSIGNMENT
+} as const;
 
 // Componente de item arrastrable
 const DraggableComponent: React.FC<{
@@ -128,15 +151,15 @@ const DraggableComponent: React.FC<{
 
   const getIcon = () => {
     switch (component.type) {
-      case ComponentTypes.VIDEO: 
+      case BUILDER_COMPONENT_TYPES.VIDEO: 
         return <Play className="w-5 h-5" />;
-      case ComponentTypes.READING: 
+      case BUILDER_COMPONENT_TYPES.READING: 
         return <FileText className="w-5 h-5" />;
-      case ComponentTypes.IMAGE: 
+      case BUILDER_COMPONENT_TYPES.IMAGE: 
         return <ImageIcon className="w-5 h-5" />;
-      case ComponentTypes.AUDIO: 
+      case BUILDER_COMPONENT_TYPES.AUDIO: 
         return <Music className="w-5 h-5" />;
-      case ComponentTypes.QUIZ: 
+      case BUILDER_COMPONENT_TYPES.QUIZ: 
         return <ClipboardList className="w-5 h-5" />;
       default: 
         return <FolderOpen className="w-5 h-5" />;
@@ -144,7 +167,7 @@ const DraggableComponent: React.FC<{
   };
 
   // Verificar si es quiz final
-  const isQuizFinal = component.type === ComponentTypes.QUIZ && isFinalQuiz(component, moduleComponents);
+  const isQuizFinal = component.type === BUILDER_COMPONENT_TYPES.QUIZ && isFinalQuiz(component, moduleComponents);
 
   return (
     <div
@@ -176,7 +199,7 @@ const DraggableComponent: React.FC<{
               </span>
             )}
           </p>
-          {component.duration && (
+          {component.duration > 0 && (
             <p className="text-xs text-gray-500">
               {component.duration} minutos
             </p>
@@ -185,7 +208,7 @@ const DraggableComponent: React.FC<{
         <span className={`px-2 py-1 text-xs rounded ${
           !module.enableSmartProgress
             ? // Sistema desactivado - todo gris excepto Quiz Final
-              (component.type === ComponentTypes.QUIZ && isFinalQuiz(component, moduleComponents))
+              (component.type === BUILDER_COMPONENT_TYPES.QUIZ && isFinalQuiz(component, moduleComponents))
                 ? 'bg-green-100 text-green-700' // Quiz Final siempre disponible
                 : 'bg-gray-100 text-gray-600'   // Todo lo demás opcional
             : // Sistema activado - lógica original  
@@ -228,13 +251,13 @@ const ComponentPalette: React.FC<{
   currentModuleId: string | null;
 }> = ({ onAddComponent, currentModuleId }) => {
   const components = [
-    { type: ComponentTypes.BANNER, label: 'Banner', icon: 'video' },
-    { type: ComponentTypes.VIDEO, label: 'Video', icon: 'play' },
-    { type: ComponentTypes.READING, label: 'Lectura', icon: 'document' },
-    { type: ComponentTypes.IMAGE, label: 'Imagen', icon: 'photo' },
-    { type: ComponentTypes.AUDIO, label: 'Audio', icon: 'music' },
-    { type: ComponentTypes.DOCUMENT, label: 'Documento', icon: 'document' },
-    { type: ComponentTypes.QUIZ, label: 'Quiz', icon: 'quiz' },
+    { type: BUILDER_COMPONENT_TYPES.BANNER, label: 'Banner', icon: 'video' },
+    { type: BUILDER_COMPONENT_TYPES.VIDEO, label: 'Video', icon: 'play' },
+    { type: BUILDER_COMPONENT_TYPES.READING, label: 'Lectura', icon: 'document' },
+    { type: BUILDER_COMPONENT_TYPES.IMAGE, label: 'Imagen', icon: 'photo' },
+    { type: BUILDER_COMPONENT_TYPES.AUDIO, label: 'Audio', icon: 'music' },
+    { type: BUILDER_COMPONENT_TYPES.DOCUMENT, label: 'Documento', icon: 'document' },
+    { type: BUILDER_COMPONENT_TYPES.QUIZ, label: 'Quiz', icon: 'quiz' },
   ];
 
   const getIcon = (icon: string) => {
@@ -301,13 +324,278 @@ const ComponentPalette: React.FC<{
   );
 };
 
+// Funciones de mapeo entre formato del builder y backend
+const mapBuilderModuleToBackendUnit = (builderModule: Module, courseId: number): Omit<CourseUnit, 'id' | 'createdAt' | 'updatedAt'> => {
+  return {
+    courseId,
+    title: builderModule.title,
+    description: builderModule.description || builderModule.subtitle,
+    orderIndex: builderModule.order,
+    isPublished: true,
+    modules: builderModule.components.length > 0 ? [{
+      unitId: 0, // Se asignará cuando se cree la Unit
+      title: `Módulo de ${builderModule.title}`,
+      description: `Contenido del módulo ${builderModule.title}`,
+      orderIndex: 0,
+      isPublished: true,
+      components: builderModule.components.map((comp, index) => mapBuilderComponentToBackend(comp, index))
+    }] : undefined
+  };
+};
+
+const mapBuilderComponentToBackend = (builderComponent: ComponentItem, orderIndex: number): Omit<CourseComponent, 'id' | 'createdAt' | 'updatedAt' | 'moduleId'> => {
+  // Mapear tipos de componente del builder a los strings esperados por el backend
+  let backendType: string;
+  switch (builderComponent.type) {
+    case BUILDER_COMPONENT_TYPES.VIDEO:
+      backendType = 'video';
+      break;
+    case BUILDER_COMPONENT_TYPES.QUIZ:
+      backendType = 'quiz';
+      break;
+    case BUILDER_COMPONENT_TYPES.READING:
+      backendType = 'reading';
+      break;
+    case BUILDER_COMPONENT_TYPES.BANNER:
+      backendType = 'banner';
+      break;
+    case BUILDER_COMPONENT_TYPES.IMAGE:
+      backendType = 'image';
+      break;
+    case BUILDER_COMPONENT_TYPES.DOCUMENT:
+      backendType = 'document';
+      break;
+    case BUILDER_COMPONENT_TYPES.AUDIO:
+      backendType = 'audio';
+      break;
+    case BUILDER_COMPONENT_TYPES.ACTIVITY:
+      backendType = 'interactive';
+      break;
+    default:
+      backendType = 'reading';
+      break;
+  }
+
+  return {
+    type: backendType as any, // Cast to any since CourseComponent.type expects ComponentType enum
+    title: builderComponent.title,
+    content: JSON.stringify(builderComponent.content || {}),
+    orderIndex,
+    isPublished: true,
+    metadata: {
+      duration: builderComponent.metadata?.duration,
+      videoUrl: builderComponent.fileUrl && builderComponent.type === BUILDER_COMPONENT_TYPES.VIDEO ? builderComponent.fileUrl : undefined,
+      fileUrl: builderComponent.fileUrl && builderComponent.type !== BUILDER_COMPONENT_TYPES.VIDEO ? builderComponent.fileUrl : undefined,
+      questions: builderComponent.type === BUILDER_COMPONENT_TYPES.QUIZ && builderComponent.content?.questions ? 
+        builderComponent.content.questions.map((q: any) => ({
+          id: q.id || Math.random(),
+          question: q.question,
+          type: q.type || 'multiple_choice',
+          options: q.options || [],
+          correctAnswer: q.correctAnswer || '',
+          explanation: q.explanation
+        })) : undefined
+    }
+  };
+};
+
+const mapBackendUnitToBuilderModule = (backendUnit: CourseUnit): Module => {
+  // Combinar todos los componentes de todos los módulos de la unidad
+  const allComponents = backendUnit.modules?.flatMap(module => 
+    module.components?.map((comp, index) => mapBackendComponentToBuilder(comp, `${backendUnit.id}-${module.id}-${comp.id}`)) || []
+  ) || [];
+
+  return {
+    id: backendIdToString(backendUnit.id), // Usar utility para convertir ID
+    title: backendUnit.title,
+    subtitle: backendUnit.description || '',
+    description: backendUnit.description || '',
+    bannerImg: '',
+    components: allComponents,
+    order: backendUnit.orderIndex,
+    enableSmartProgress: true,
+    backendUnitId: backendUnit.id,
+    backendModuleId: backendUnit.modules?.[0]?.id
+  };
+};
+
+const mapBackendComponentToBuilder = (backendComponent: CourseComponent, uniqueId: string): ComponentItem => {
+  // Mapear tipos del backend (strings) al builder
+  let builderType: string;
+  const backendTypeStr = String(backendComponent.type).toLowerCase();
+  
+  switch (backendTypeStr) {
+    case 'video':
+      builderType = BUILDER_COMPONENT_TYPES.VIDEO;
+      break;
+    case 'quiz':
+      builderType = BUILDER_COMPONENT_TYPES.QUIZ;
+      break;
+    case 'banner':
+      builderType = BUILDER_COMPONENT_TYPES.BANNER;
+      break;
+    case 'image':
+      builderType = BUILDER_COMPONENT_TYPES.IMAGE;
+      break;
+    case 'audio':
+      builderType = BUILDER_COMPONENT_TYPES.AUDIO;
+      break;
+    case 'document':
+      builderType = BUILDER_COMPONENT_TYPES.DOCUMENT;
+      break;
+    case 'interactive':
+      builderType = BUILDER_COMPONENT_TYPES.ACTIVITY;
+      break;
+    case 'reading':
+    case 'text':
+    default:
+      builderType = BUILDER_COMPONENT_TYPES.READING;
+      break;
+  }
+
+  let parsedContent = {};
+  try {
+    parsedContent = backendComponent.content ? JSON.parse(backendComponent.content) : {};
+  } catch {
+    parsedContent = { text: backendComponent.content || '' };
+  }
+
+  return {
+    id: uniqueId,
+    backendComponentId: backendComponent.id, // Store backend ID for updates
+    type: builderType,
+    title: backendComponent.title,
+    content: parsedContent,
+    fileUrl: backendComponent.metadata?.videoUrl || backendComponent.metadata?.fileUrl,
+    duration: backendComponent.duration || 0,
+    isMandatory: Boolean(backendComponent.is_mandatory),
+    order: backendComponent.order || 0,
+    metadata: {
+      duration: backendComponent.metadata?.duration,
+      poster: builderType === BUILDER_COMPONENT_TYPES.VIDEO ? undefined : undefined,
+    },
+    backendComponentId: backendComponent.id
+  };
+};
+
+// Sistema de validación de IDs para prevenir errores
+const validateModuleConsistency = (modules: Module[]): string[] => {
+  const errors: string[] = [];
+  const seenIds = new Set<string>();
+  
+  modules.forEach((module, index) => {
+    // Validar unicidad de IDs
+    if (seenIds.has(module.id)) {
+      errors.push(`Módulo ${index}: ID duplicado "${module.id}"`);
+    } else {
+      seenIds.add(module.id);
+    }
+    
+    // Validar que IDs temporales no tengan IDs de backend
+    if (isTemporaryId(module.id) && (module.backendUnitId || module.backendModuleId)) {
+      errors.push(`Módulo ${index}: ID temporal "${module.id}" no debería tener IDs de backend`);
+    }
+    
+    // Validar que IDs no temporales tengan IDs de backend
+    if (!isTemporaryId(module.id) && !module.backendUnitId && !module.backendModuleId) {
+      logger.warn(`Módulo ${index}: ID "${module.id}" no temporal sin IDs de backend - posible inconsistencia`);
+    }
+    
+    // Validar componentes
+    const componentIds = new Set<string>();
+    module.components.forEach((component, compIndex) => {
+      if (componentIds.has(component.id)) {
+        errors.push(`Módulo ${index}, Componente ${compIndex}: ID duplicado "${component.id}"`);
+      } else {
+        componentIds.add(component.id);
+      }
+      
+      if (isTemporaryId(component.id) && component.backendComponentId) {
+        errors.push(`Módulo ${index}, Componente ${compIndex}: ID temporal "${component.id}" no debería tener ID de backend`);
+      }
+    });
+  });
+  
+  return errors;
+};
+
+// Función helper para obtener contenido por defecto según tipo de componente
+const getDefaultContentByType = (componentType: string): any => {
+  switch (componentType) {
+    case BUILDER_COMPONENT_TYPES.BANNER:
+    case 'banner':
+      return { title: `Nuevo banner`, img: '', subtitle: null, description: null };
+    case BUILDER_COMPONENT_TYPES.VIDEO:
+    case 'video':
+      return { title: `Nuevo video`, src: '', poster: '', description: null, duration: null, autoplay: false, controls: true };
+    case BUILDER_COMPONENT_TYPES.READING:
+    case 'reading':
+      return { title: `Nueva lectura`, text: '', format: 'html' };
+    case BUILDER_COMPONENT_TYPES.IMAGE:
+    case 'image':
+    case 'photo':
+      return { title: `Nueva imagen`, img: '', alt: '', caption: null, description: null };
+    case BUILDER_COMPONENT_TYPES.DOCUMENT:
+    case 'document':
+      return { title: `Nuevo documento`, file_url: '', file_name: '', file_type: '', description: null, downloadable: true };
+    case BUILDER_COMPONENT_TYPES.AUDIO:
+    case 'audio':
+    case 'music':
+      return { title: `Nuevo audio`, src: '', description: null, duration: null, autoplay: false, controls: true };
+    case BUILDER_COMPONENT_TYPES.QUIZ:
+    case 'quiz':
+      return { title: `Nuevo quiz`, questions: [], passing_score: 70, time_limit: null, attempts_allowed: 3, show_correct_answers: true };
+    case BUILDER_COMPONENT_TYPES.INTERACTIVE:
+    case 'interactive':
+      return { title: `Nuevo interactivo`, type: 'generic', data: [], instructions: null };
+    default:
+      return { title: `Nuevo ${componentType}` };
+  }
+};
+
 export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
   courseData,
   onUpdate,
   validationErrors,
-  onBuilderDataChange
+  onBuilderDataChange,
+  existingCourseId,
+  initialBuilderData
 }) => {
   const { user } = useAuthStore();
+  
+  // Estado del curso actual - usar existingCourseId si se proporciona (modo edición)
+  const [currentCourseId, setCurrentCourseId] = useState<number | null>(existingCourseId || null);
+  
+  // Sistema de mapeo de IDs para mantener relaciones builder ↔ backend
+  const idMapper = useRef(new IdMapper());
+  
+  // Sincronizar currentCourseId con existingCourseId cuando cambie (modo edición)
+  useEffect(() => {
+    if (existingCourseId && existingCourseId !== currentCourseId) {
+      setCurrentCourseId(existingCourseId);
+    }
+  }, [existingCourseId, currentCourseId]);
+
+  // Actualizar cuando cambien los datos iniciales (pero solo si el curso está vacío)
+  useEffect(() => {
+    if (initialBuilderData?.modules && 
+        initialBuilderData.modules.length > 0 && 
+        course.modules.length === 0) {
+      logger.info('📚 TeacherCourseBuilder: Actualizando con nuevos datos del builder', initialBuilderData);
+      setCourse({
+        id: initialBuilderData.id,
+        title: initialBuilderData.title || courseData.title,
+        description: initialBuilderData.description || courseData.description,
+        modules: initialBuilderData.modules,
+        activities: initialBuilderData.activities || []
+      });
+    }
+  }, [initialBuilderData?.id]); // Solo dependemos del ID para evitar bucles
+  
+  // Limpiar mapper cuando cambia el curso
+  useEffect(() => {
+    idMapper.current.clear();
+  }, [currentCourseId]);
   
   // Use the course creation hook with notification support
   const {
@@ -334,34 +622,73 @@ export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
     }
   });
   
-  const [course, setCourse] = useState<Course>({
-    title: courseData.title,
-    description: courseData.description,
-    modules: courseData.modules.map(module => ({
-      id: module.id?.toString() || `module-${Date.now()}`,
-      title: module.title,
-      subtitle: module.subtitle || '',
-      description: module.description,
-      bannerImg: module.bannerImg || '',
-      components: [],
-      order: module.order,
-      enableSmartProgress: module.enableSmartProgress ?? true // Por defecto activado
-    })),
-    activities: []
+  // Inicializar con datos existentes si están disponibles
+  const [course, setCourse] = useState<Course>(() => {
+    if (initialBuilderData?.modules && initialBuilderData.modules.length > 0) {
+      logger.info('📚 TeacherCourseBuilder: Inicializando con datos existentes', initialBuilderData);
+      return {
+        id: initialBuilderData.id,
+        title: initialBuilderData.title || courseData.title,
+        description: initialBuilderData.description || courseData.description,
+        modules: initialBuilderData.modules,
+        activities: initialBuilderData.activities || []
+      };
+    }
+    return {
+      title: courseData.title,
+      description: courseData.description,
+      modules: [],
+      activities: []
+    };
   });
   
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [previewModuleId, setPreviewModuleId] = useState<string | null>(null);
   const [previewCurrentModuleId, setPreviewCurrentModuleId] = useState<string | null>(null);
-  const [currentCourseId, setCurrentCourseId] = useState<number | null>(null);
   const [editingComponent, setEditingComponent] = useState<{ component: ComponentItem; moduleId: string } | null>(null);
   const [editingModuleBanner, setEditingModuleBanner] = useState<string | null>(null);
 
-  // Enviar datos del constructor al padre
+  // Ref para rastrear si ya se inicializaron los datos
+  const hasInitialized = useRef(false);
+  
+  // Actualizar datos cuando initialBuilderData cambia (carga asíncrona)
   useEffect(() => {
-    if (onBuilderDataChange) {
+    // Solo inicializar si:
+    // 1. Hay datos de initialBuilderData 
+    // 2. No se ha inicializado antes
+    // 3. El curso actual está vacío (para evitar sobrescribir datos válidos)
+    if (initialBuilderData?.modules && 
+        initialBuilderData.modules.length > 0 && 
+        !hasInitialized.current &&
+        course.modules.length === 0) {
+      logger.info('📚 TeacherCourseBuilder: Actualizando con nuevos datos existentes', initialBuilderData);
+      setCourse({
+        id: initialBuilderData.id,
+        title: initialBuilderData.title || courseData.title,
+        description: initialBuilderData.description || courseData.description,
+        modules: initialBuilderData.modules,
+        activities: initialBuilderData.activities || []
+      });
+      hasInitialized.current = true;
+      logger.success('📚 TeacherCourseBuilder: Datos inicializados correctamente');
+    }
+  }, [initialBuilderData, course.modules.length]); // Depender de ambos para detectar cambios
+
+  // Enviar datos del constructor al padre con validación
+  useEffect(() => {
+    // Solo enviar datos si ya se inicializó correctamente
+    // o si realmente hay datos para enviar
+    if (onBuilderDataChange && (hasInitialized.current || course.modules.length > 0)) {
       onBuilderDataChange(course);
+    }
+    
+    // Validación de consistencia en desarrollo
+    if (import.meta.env.DEV) {
+      const validationErrors = validateModuleConsistency(course.modules);
+      if (validationErrors.length > 0) {
+        logger.warn('Errores de consistencia en IDs detectados:', validationErrors);
+      }
     }
   }, [course, onBuilderDataChange]);
 
@@ -387,19 +714,56 @@ export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
     }
   });
 
+  // Cargar curso existente desde el backend si hay un ID de curso
+  useEffect(() => {
+    const loadExistingCourse = async () => {
+      if (currentCourseId && createdCourse?.units) {
+        logger.course('Cargando curso existente desde backend:', currentCourseId);
+        
+        // Mapear las Units del backend al formato del builder
+        const builderModules = createdCourse.units.map(unit => {
+          const module = mapBackendUnitToBuilderModule(unit);
+          
+          // Registrar relación en el IdMapper
+          if (module.backendUnitId) {
+            idMapper.current.registerMapping(module.id, module.backendUnitId);
+          }
+          
+          return module;
+        });
+        
+        setCourse(prevCourse => ({
+          ...prevCourse,
+          modules: builderModules
+        }));
+        
+        logger.success('Curso cargado desde backend:', { 
+          unitsCount: createdCourse.units.length,
+          modulesCount: builderModules.length,
+          mappingsRegistered: idMapper.current.getAllMappings().length
+        });
+      }
+    };
+
+    loadExistingCourse();
+  }, [currentCourseId, createdCourse?.units]);
+
   // Sync course data with props - usar useMemo para evitar re-renders innecesarios
-  const courseDataHash = `${courseData.title}-${courseData.description}-${courseData.modules.length}`;
+  const courseDataHash = `${courseData.title || ''}-${courseData.description || ''}-${courseData.modules?.length || 0}`;
   
   useEffect(() => {
+    // Solo sincronizar desde props si no hay datos del backend ya cargados
+    if (currentCourseId && createdCourse?.units) return;
+    
     setCourse(prevCourse => {
       // Solo actualizar si hay cambios reales comparando el hash
-      const currentHash = `${prevCourse.title}-${prevCourse.description}-${prevCourse.modules.length}`;
+      const currentHash = `${prevCourse.title}-${prevCourse.description}-${prevCourse.modules?.length || 0}`;
       
       if (currentHash !== courseDataHash) {
         return {
-          title: courseData.title,
-          description: courseData.description,
-          modules: courseData.modules.map(module => ({
+          title: courseData.title || '',
+          description: courseData.description || '',
+          modules: (courseData.modules || []).map(module => ({
             id: module.id?.toString() || `module-${Date.now()}`,
             title: module.title,
             subtitle: module.subtitle || '',
@@ -415,28 +779,41 @@ export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
       
       return prevCourse;
     });
-  }, [courseDataHash, courseData.title, courseData.description, courseData.modules]);
+  }, [courseDataHash, courseData.title, courseData.description, courseData.modules, currentCourseId, createdCourse]);
 
   // Sync changes back to parent con debounce - usar useCallback para onUpdate
   const stableOnUpdate = useCallback(onUpdate, []);
   
   useEffect(() => {
     const timeoutId = setTimeout(() => {
+      // Mapear los módulos del builder al formato esperado por el padre
       stableOnUpdate({
         title: course.title,
         description: course.description,
         modules: course.modules.map(module => ({
-          id: parseInt(module.id) || undefined,
+          id: module.backendUnitId || stringIdToBackend(module.id) || undefined,
           title: module.title,
           description: module.description,
+          subtitle: module.subtitle,
           order: module.order,
-          lessons: []
+          lessons: [], // Mantener compatibilidad
+          enableSmartProgress: module.enableSmartProgress,
+          backendUnitId: module.backendUnitId,
+          backendModuleId: module.backendModuleId,
+          components: module.components.map(comp => ({
+            id: comp.backendComponentId || stringIdToBackend(comp.id) || comp.id,
+            type: comp.type,
+            title: comp.title,
+            content: comp.content,
+            order: comp.order,
+            backendComponentId: comp.backendComponentId
+          }))
         }))
       });
     }, 300); // Incrementar debounce time
     
     return () => clearTimeout(timeoutId);
-  }, [course.title, course.description, course.modules.length, stableOnUpdate]);
+  }, [course.title, course.description, course.modules?.length || 0, course.modules, stableOnUpdate]);
 
   // Función para renderizar componente en vista previa - memoizada para evitar re-renders
   const renderComponentPreview = useCallback((component: ComponentItem) => {
@@ -463,7 +840,7 @@ export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
     };
 
     switch (component.type) {
-      case ComponentTypes.BANNER:
+      case BUILDER_COMPONENT_TYPES.BANNER:
         const bannerImg = getImageFromContent(component);
         const bannerTitle = component.content?.title || component.title || 'Banner de Ejemplo';
         const bannerSubtitle = component.content?.subtitle || undefined;
@@ -475,7 +852,7 @@ export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
             subtitle={bannerSubtitle}
           />
         );
-      case ComponentTypes.VIDEO:
+      case BUILDER_COMPONENT_TYPES.VIDEO:
         const videoSrc = getMediaUrl(component.content?.src || component.fileUrl, 'videos');
         const posterUrl = component.content?.poster || component.metadata?.poster ? 
           getMediaUrl(component.content?.poster || component.metadata.poster, 'images') : undefined;
@@ -491,7 +868,7 @@ export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
             height="400px"
           />
         );
-      case ComponentTypes.READING:
+      case BUILDER_COMPONENT_TYPES.READING:
         const readingContent = component.content?.text || 'Contenido de lectura de ejemplo. Aquí iría el texto educativo del módulo.';
         return (
           <Paragraph 
@@ -499,7 +876,7 @@ export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
             content={readingContent}
           />
         );
-      case ComponentTypes.IMAGE:
+      case BUILDER_COMPONENT_TYPES.IMAGE:
         const imageUrl = getImageFromContent(component);
         return (
           <Image 
@@ -508,7 +885,7 @@ export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
             alt={component.title || 'Imagen de Ejemplo'}
           />
         );
-      case ComponentTypes.DOCUMENT:
+      case BUILDER_COMPONENT_TYPES.DOCUMENT:
         const documentUrl = getMediaUrl(component.content?.file_url || component.fileUrl, 'documents');
         // Obtener el módulo actual para el progreso
         const currentPreviewModule = course.modules.find(m => m.id === previewCurrentModuleId);
@@ -530,7 +907,7 @@ export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
             }}
           />
         );
-      case ComponentTypes.AUDIO:
+      case BUILDER_COMPONENT_TYPES.AUDIO:
         const audioSrc = getMediaUrl(component.content?.src || component.fileUrl, 'audio');
         return (
           <AudioPlayer
@@ -543,7 +920,7 @@ export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
             variant="default"
           />
         );
-      case ComponentTypes.QUIZ:
+      case BUILDER_COMPONENT_TYPES.QUIZ:
         // Convert content format to Quiz component format if available
         const convertedQuestions = component.content?.questions ? 
           component.content.questions.map((q: any) => ({
@@ -595,20 +972,20 @@ export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
   // Función para determinar si un componente debe ser obligatorio
   const shouldComponentBeMandatory = (componentType: string): boolean => {
     const mandatoryTypes = [
-      ComponentTypes.VIDEO,
-      ComponentTypes.AUDIO, 
-      ComponentTypes.DOCUMENT,
-      ComponentTypes.QUIZ
+      BUILDER_COMPONENT_TYPES.VIDEO,
+      BUILDER_COMPONENT_TYPES.AUDIO, 
+      BUILDER_COMPONENT_TYPES.DOCUMENT,
+      BUILDER_COMPONENT_TYPES.QUIZ
     ];
     return mandatoryTypes.includes(componentType);
   };
 
   // Función para verificar si un quiz es el quiz final del módulo
   const isFinalQuiz = (component: ComponentItem, moduleComponents: ComponentItem[]): boolean => {
-    if (component.type !== ComponentTypes.QUIZ) return false;
+    if (component.type !== BUILDER_COMPONENT_TYPES.QUIZ) return false;
     
     // Es quiz final si es el último quiz del módulo
-    const quizzes = moduleComponents.filter(c => c.type === ComponentTypes.QUIZ);
+    const quizzes = moduleComponents.filter(c => c.type === BUILDER_COMPONENT_TYPES.QUIZ);
     const currentQuizIndex = quizzes.findIndex(q => q.id === component.id);
     return currentQuizIndex === quizzes.length - 1;
   };
@@ -636,7 +1013,7 @@ export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
   const getComponentLabel = (component: ComponentItem, moduleComponents: ComponentItem[], module: Module): string => {
     // Si el sistema inteligente está desactivado, todo es opcional excepto el Quiz Final
     if (!module.enableSmartProgress) {
-      if (component.type === ComponentTypes.QUIZ && isFinalQuiz(component, moduleComponents)) {
+      if (component.type === BUILDER_COMPONENT_TYPES.QUIZ && isFinalQuiz(component, moduleComponents)) {
         return 'Quiz Final (Siempre disponible)';
       }
       return 'Opcional';
@@ -645,18 +1022,18 @@ export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
     // Sistema inteligente activado - lógica original
     if (!component.isMandatory) return 'Opcional';
     
-    if (component.type === ComponentTypes.QUIZ && isFinalQuiz(component, moduleComponents)) {
+    if (component.type === BUILDER_COMPONENT_TYPES.QUIZ && isFinalQuiz(component, moduleComponents)) {
       return 'Quiz Final (Calificado)';
     }
     
     const labels = {
-      [ComponentTypes.VIDEO]: 'Video (Obligatorio)',
-      [ComponentTypes.AUDIO]: 'Audio (Obligatorio)', 
-      [ComponentTypes.DOCUMENT]: 'Documento (Obligatorio)',
-      [ComponentTypes.QUIZ]: 'Quiz (Obligatorio)',
-      [ComponentTypes.BANNER]: 'Banner',
-      [ComponentTypes.IMAGE]: 'Imagen',
-      [ComponentTypes.READING]: 'Lectura'
+      [BUILDER_COMPONENT_TYPES.VIDEO]: 'Video (Obligatorio)',
+      [BUILDER_COMPONENT_TYPES.AUDIO]: 'Audio (Obligatorio)', 
+      [BUILDER_COMPONENT_TYPES.DOCUMENT]: 'Documento (Obligatorio)',
+      [BUILDER_COMPONENT_TYPES.QUIZ]: 'Quiz (Obligatorio)',
+      [BUILDER_COMPONENT_TYPES.BANNER]: 'Banner',
+      [BUILDER_COMPONENT_TYPES.IMAGE]: 'Imagen',
+      [BUILDER_COMPONENT_TYPES.READING]: 'Lectura'
     };
     
     return labels[component.type] || 'Obligatorio';
@@ -673,10 +1050,13 @@ export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
       title: courseData.title || 'Nuevo Curso',
       description: courseData.description || 'Descripción del curso',
       shortDescription: (courseData.description || 'Descripción del curso').substring(0, 100),
-      price: courseData.price || 0,
-      durationHours: courseData.durationHours || 1,
-      difficulty: courseData.difficulty || 'beginner',
+      duration_hours: courseData.duration_hours || courseData.durationHours || 1,
+      difficulty_level: courseData.difficulty_level || courseData.difficulty || CourseDifficulty.BEGINNER,
       tags: courseData.tags || [],
+      categoryId: courseData.categoryId || undefined,
+      bannerImage: courseData.bannerImage || undefined,
+      learningObjectives: courseData.learningObjectives || [],
+      prerequisites: courseData.prerequisites || [],
       teacherId: 0 // Se agregará automáticamente desde el store
     };
 
@@ -706,135 +1086,137 @@ export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
     }
   };
 
-  // Agregar nuevo módulo
+  // Agregar nuevo módulo (que crea Unit → Module → Components en backend)
   const addModuleLocal = async () => {
     try {
       // Primero asegurarse de que existe el curso en el backend
       const courseId = await ensureCourseExists();
       if (!courseId) {
-        console.error('No se pudo crear o obtener el curso');
+        logger.error('No se pudo crear o obtener el curso');
         // Crear módulo localmente como fallback
         const newModule: Module = {
-          id: `module-temp-${Date.now()}`,
-          title: `Módulo ${course.modules.length + 1}`,
+          id: moduleIdUtils.generateTempId(),
+          title: `Módulo ${(course.modules?.length || 0) + 1}`,
           subtitle: '',
           description: '',
           bannerImg: '',
           components: [],
-          order: course.modules.length,
-          enableSmartProgress: true // Por defecto activado
+          order: course.modules?.length || 0,
+          enableSmartProgress: true
         };
         
         setCourse(prev => ({
           ...prev,
-          modules: [...prev.modules, newModule]
+          modules: [...(prev.modules || []), newModule]
         }));
         setSelectedModuleId(newModule.id);
         return;
       }
 
-      // Crear datos de la unidad para el backend
-      const unitData: CreateUnitData = {
-        title: `Módulo ${course.modules.length + 1}`,
-        description: '',
-        orderIndex: course.modules.length
-      };
-
-      // Paso 1: Crear la unidad en el backend
-      if (import.meta.env.MODE === 'development') {
-        logger.course('Intentando crear unidad en backend con courseId:', courseId);
-      }
-      const unitResult = await courseService.createUnit(courseId, unitData);
-      if (import.meta.env.MODE === 'development') {
-        logger.course('Resultado de createUnit:', unitResult);
-      }
-      
-      if (unitResult.success && unitResult.unit && unitResult.unit.id) {
-        // Paso 2: Crear el módulo dentro de la unidad
-        const moduleData = {
-          title: `Módulo ${course.modules.length + 1}`,
-          description: '',
-          orderIndex: 0 // Primer módulo de esta unidad
-        };
-        
-        if (import.meta.env.MODE === 'development') {
-          logger.course('Creando módulo en unidad ID:', unitResult.unit.id);
-        }
-        const moduleResult = await courseService.createModule(unitResult.unit.id, moduleData);
-        if (import.meta.env.MODE === 'development') {
-          logger.course('Resultado de createModule:', moduleResult);
-        }
-        
-        if (moduleResult.success && moduleResult.module && moduleResult.module.id) {
-          // Crear módulo frontend con el ID real del módulo
-          const newModule: Module = {
-            id: moduleResult.module.id.toString(),
-            title: moduleResult.module.title || moduleData.title,
-            subtitle: moduleResult.module.subtitle || '',
-            description: moduleResult.module.description || '',
-            bannerImg: moduleResult.module.bannerImg || '',
-            components: [],
-            order: moduleResult.module.order_index || moduleData.orderIndex,
-            unitId: unitResult.unit.id, // Guardar referencia a la unidad
-            enableSmartProgress: moduleResult.module.enableSmartProgress ?? true
-          };
-          
-          setCourse(prev => ({
-            ...prev,
-            modules: [...prev.modules, newModule]
-          }));
-          setSelectedModuleId(newModule.id);
-          
-          if (import.meta.env.MODE === 'development') {
-            logger.success('Módulo creado exitosamente:', { title: newModule.title, id: newModule.id });
-          }
-        } else {
-          console.error('Error creando módulo en backend:', moduleResult.error);
-          throw new Error(moduleResult.error || 'No se pudo crear el módulo');
-        }
-      } else {
-        console.error('Error creando unidad en backend:', unitResult.error);
-        throw new Error(unitResult.error || 'No se pudo crear la unidad');
-      }
-    } catch (error) {
-      console.error('Error al agregar módulo:', error);
-      // Crear módulo localmente como fallback
-      const newModule: Module = {
-        id: `module-temp-${Date.now()}`,
-        title: `Módulo ${course.modules.length + 1}`,
+      // Crear un "módulo" temporal que se convertirá en Unit → Module
+      const tempBuilderModule: Module = {
+        id: moduleIdUtils.generateBuilderId(),
+        title: `Módulo ${(course.modules?.length || 0) + 1}`,
         subtitle: '',
         description: '',
         bannerImg: '',
         components: [],
-        order: course.modules.length,
+        order: course.modules?.length || 0,
+        enableSmartProgress: true
+      };
+
+      // Usar función de mapeo para crear la Unit en el backend
+      const unitData = mapBuilderModuleToBackendUnit(tempBuilderModule, courseId);
+      
+      logger.course('Creando Unit en backend:', unitData.title);
+      
+      // Usar el hook de creación de cursos para crear la Unit
+      const result = await createUnit(courseId, {
+        title: unitData.title,
+        description: unitData.description || '',
+        orderIndex: unitData.orderIndex
+      });
+      
+      if (result.success && result.unit) {
+        // Crear un Module dentro de la Unit recién creada
+        const moduleResult = await createModule(result.unit.id, {
+          title: `Módulo de ${unitData.title}`,
+          description: unitData.description || `Contenido del ${unitData.title}`,
+          orderIndex: 0
+        });
+
+        if (moduleResult.success && moduleResult.module) {
+          // Mapear la Unit completa de vuelta al formato del builder
+          const completeUnit: CourseUnit = {
+            ...result.unit,
+            modules: [moduleResult.module]
+          };
+          
+          const builderModule = mapBackendUnitToBuilderModule(completeUnit);
+          
+          // Registrar relación en el IdMapper
+          if (builderModule.backendUnitId) {
+            idMapper.current.registerMapping(builderModule.id, builderModule.backendUnitId);
+          }
+          
+          setCourse(prev => ({
+            ...prev,
+            modules: [...(prev.modules || []), builderModule]
+          }));
+          setSelectedModuleId(builderModule.id);
+          
+          logger.success('Módulo creado exitosamente:', { 
+            title: builderModule.title, 
+            unitId: builderModule.backendUnitId,
+            moduleId: builderModule.backendModuleId,
+            mappingRegistered: !!builderModule.backendUnitId
+          });
+        } else {
+          throw new Error('No se pudo crear el módulo dentro de la unidad');
+        }
+      } else {
+        throw new Error('No se pudo crear la unidad en el backend');
+      }
+    } catch (error) {
+      logger.error('Error al agregar módulo:', error);
+      // Crear módulo localmente como fallback
+      const newModule: Module = {
+        id: moduleIdUtils.generateTempId(),
+        title: `Módulo ${(course.modules?.length || 0) + 1}`,
+        subtitle: '',
+        description: '',
+        bannerImg: '',
+        components: [],
+        order: course.modules?.length || 0,
         enableSmartProgress: true
       };
       
       setCourse(prev => ({
         ...prev,
-        modules: [...prev.modules, newModule]
+        modules: [...(prev.modules || []), newModule]
       }));
       setSelectedModuleId(newModule.id);
     }
   };
 
-  // Agregar componente a un módulo
+  // Agregar componente a un módulo (crea Component en el Module del backend)
   const addComponentLocal = async (type: string, moduleId: string) => {
     const targetModule = course.modules.find(m => m.id === moduleId);
     if (!targetModule) {
-      console.error('Módulo no encontrado');
+      logger.error('Módulo no encontrado:', moduleId);
       return;
     }
 
     try {
       // Si el módulo tiene un ID temporal, crear componente localmente
-      if (moduleId.startsWith('module-temp-')) {
+      if (isTemporaryId(moduleId)) {
         const newComponent: ComponentItem = {
-          id: `component-temp-${Date.now()}`,
+          id: componentIdUtils.generateTempId(),
           type,
           title: `Nuevo ${type}`,
-          content: '',
-          isMandatory: shouldComponentBeMandatory(type),
+          content: getDefaultContentByType(type),
+          duration: 0,
+          isMandatory: targetModule.enableSmartProgress ? shouldComponentBeMandatory(type) : false,
           order: targetModule.components.length,
           metadata: {}
         };
@@ -852,93 +1234,75 @@ export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
         return;
       }
 
-      // Intentar crear en el backend si el módulo tiene ID real
-      const getDefaultContentByType = (componentType: string): any => {
-        switch (componentType) {
-          case 'banner':
-            return { title: `Nuevo ${componentType}`, img: '', subtitle: null, description: null };
-          case 'video':
-            return { title: `Nuevo ${componentType}`, src: '', poster: '', description: null, duration: null, autoplay: false, controls: true };
-          case 'reading':
-            return { title: `Nuevo ${componentType}`, text: '', format: 'html' };
-          case 'image':
-            return { title: `Nuevo ${componentType}`, img: '', alt: '', caption: null, description: null };
-          case 'document':
-            return { title: `Nuevo ${componentType}`, file_url: '', file_name: '', file_type: '', description: null, downloadable: true };
-          case 'audio':
-            return { title: `Nuevo ${componentType}`, src: '', description: null, duration: null, autoplay: false, controls: true };
-          case 'quiz':
-            return { title: `Nuevo ${componentType}`, questions: [], passing_score: 70, time_limit: null, attempts_allowed: 3, show_correct_answers: true };
-          case 'interactive':
-            return { title: `Nuevo ${componentType}`, type: 'generic', data: [], instructions: null };
-          default:
-            return { title: `Nuevo ${componentType}` };
-        }
-      };
-
-      const componentData: CreateComponentData = {
+      // Crear componente temporal para mapear al backend
+      const tempComponent: ComponentItem = {
+        id: componentIdUtils.generateBuilderId(),
         type,
         title: `Nuevo ${type}`,
         content: getDefaultContentByType(type),
-        orderIndex: targetModule.components.length,
+        duration: 0,
+        isMandatory: targetModule.enableSmartProgress ? shouldComponentBeMandatory(type) : false,
+        order: targetModule.components.length,
         metadata: {}
       };
 
-      const result = await courseService.createComponent(parseInt(moduleId), componentData);
-      
-      if (result.success && result.component) {
-        // Crear componente con el ID real del backend
-        const newComponent: ComponentItem = {
-          id: result.component.id.toString(),
-          type: result.component.type,
-          title: result.component.title,
-          content: result.component.content || '',
-          isMandatory: shouldComponentBeMandatory(type),
-          order: result.component.orderIndex,
-          metadata: result.component.metadata || {}
-        };
-
-        setCourse(prev => ({
-          ...prev,
-          modules: prev.modules.map(module =>
-            module.id === moduleId
-              ? { ...module, components: [...module.components, newComponent] }
-              : module
-          )
-        }));
+      // Verificar si el módulo tiene un ID de backend
+      if (targetModule.backendModuleId) {
+        // El módulo existe en el backend, crear el componente allí
+        const backendComponentData = mapBuilderComponentToBackend(tempComponent, targetModule.components.length);
         
-        logger.course(`Componente ${type} creado en backend`);
-      } else {
-        // Si falla el backend, crear localmente
-        console.error('Error del backend:', result.error);
-        const newComponent: ComponentItem = {
-          id: `component-temp-${Date.now()}`,
-          type,
-          title: `Nuevo ${type}`,
-          content: '',
-          isMandatory: shouldComponentBeMandatory(type),
-          order: targetModule.components.length,
-          metadata: {}
-        };
+        logger.course('Creando Component en Module ID:', targetModule.backendModuleId);
+        
+        // Usar el hook de creación para crear el componente
+        const result = await createComponent(targetModule.backendModuleId, {
+          type: backendComponentData.type,
+          title: backendComponentData.title,
+          content: typeof backendComponentData.content === 'string' ? 
+            JSON.parse(backendComponentData.content) : 
+            backendComponentData.content || {},
+          order: backendComponentData.orderIndex,
+          duration: backendComponentData.metadata?.duration || 0,
+          is_mandatory: tempComponent.isMandatory || false
+        });
+        
+        if (result.success && result.component) {
+          // Mapear el componente del backend de vuelta al builder
+          const builderComponent = mapBackendComponentToBuilder(
+            result.component, 
+            `${targetModule.id}-${result.component.id}`
+          );
 
-        setCourse(prev => ({
-          ...prev,
-          modules: prev.modules.map(module =>
-            module.id === moduleId
-              ? { ...module, components: [...module.components, newComponent] }
-              : module
-          )
-        }));
+          setCourse(prev => ({
+            ...prev,
+            modules: prev.modules.map(module =>
+              module.id === moduleId
+                ? { ...module, components: [...module.components, builderComponent] }
+                : module
+            )
+          }));
+          
+          logger.success(`Componente ${type} creado en backend:`, { 
+            id: result.component.id,
+            moduleId: targetModule.backendModuleId 
+          });
+        } else {
+          throw new Error('No se pudo crear el componente en el backend');
+        }
+      } else {
+        // El módulo no existe en el backend aún, crear el componente localmente
+        logger.warn('Módulo sin ID de backend, creando componente localmente:', targetModule.id);
+        throw new Error('Módulo sin sincronizar con backend - creando componente localmente');
       }
     } catch (error) {
-      console.error('Error al agregar componente:', error);
+      logger.error('Error al agregar componente:', error);
       // Crear componente localmente como fallback
       const newComponent: ComponentItem = {
-        id: `component-temp-${Date.now()}`,
+        id: componentIdUtils.generateTempId(),
         type,
         title: `Nuevo ${type}`,
-        content: '',
-        isMandatory: true,
+        content: getDefaultContentByType(type),
+        duration: 0,
+        isMandatory: targetModule.enableSmartProgress ? shouldComponentBeMandatory(type) : false,
         order: targetModule.components.length,
         metadata: {}
       };
@@ -991,8 +1355,17 @@ export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
   };
 
   const deleteComponentLocal = async (componentId: string, moduleId: string) => {
-    // Si es un componente temporal (no tiene ID numérico), eliminarlo solo localmente
-    if (componentId.startsWith('component-temp-')) {
+    // Encontrar el componente para obtener su backendComponentId
+    const module = course.modules.find(m => m.id === moduleId);
+    const component = module?.components.find(c => c.id === componentId);
+    
+    if (!component) {
+      logger.error('❌ Componente no encontrado:', componentId);
+      return;
+    }
+    
+    // Si es un componente temporal (no tiene backendComponentId), eliminarlo solo localmente
+    if (!component.backendComponentId || componentId.startsWith('component-temp-')) {
       setCourse(prev => ({
         ...prev,
         modules: prev.modules.map(module =>
@@ -1005,10 +1378,12 @@ export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
       return;
     }
     
-    // Si es un componente real, intentar eliminar del backend
-    const numericId = parseInt(componentId);
-    if (isNaN(numericId)) {
-      console.error('ID de componente inválido:', componentId);
+    // Si es un componente real, usar el backendComponentId para eliminar
+    const numericId = component.backendComponentId;
+    logger.info('🗑️ Eliminando componente del backend con ID:', numericId);
+    
+    if (!numericId || isNaN(Number(numericId))) {
+      logger.error('❌ ID de backend inválido:', numericId);
       return;
     }
     
@@ -1251,7 +1626,7 @@ export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
                                 <div className="flex items-center space-x-2">
                                   <input
                                     type="text"
-                                    value={module.title}
+                                    value={module.title || ''}
                                     onChange={(e) => {
                                       setCourse(prev => ({
                                         ...prev,
@@ -1291,7 +1666,7 @@ export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
                                 />
                                 <input
                                   type="text"
-                                  value={module.description}
+                                  value={module.description || ''}
                                   onChange={(e) => {
                                     setCourse(prev => ({
                                       ...prev,
@@ -1380,7 +1755,26 @@ export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
                               <button
                                 onClick={async (e) => {
                                   e.stopPropagation();
-                                  const result = await deleteUnit(parseInt(module.id));
+                                  // Intentar obtener ID del backend usando múltiples fuentes
+                                  let unitId = module.backendUnitId || 
+                                               idMapper.current.getBackendId(module.id) ||
+                                               extractBackendId({ backendUnitId: module.backendUnitId, id: module.id });
+                                               
+                                  if (!unitId) {
+                                    logger.warn('No se puede eliminar módulo sin ID de backend válido:', { 
+                                      moduleId: module.id, 
+                                      backendUnitId: module.backendUnitId,
+                                      mapperHasId: !!idMapper.current.getBackendId(module.id)
+                                    });
+                                    return;
+                                  }
+                                  
+                                  const result = await deleteUnit(validateBackendId(unitId, 'Unit'));
+                                  
+                                  // Eliminar del mapper si se eliminó exitosamente
+                                  if (result.success) {
+                                    idMapper.current.registerMapping(module.id, 0); // Marcar como eliminado
+                                  }
                                   
                                   if (result.success) {
                                     setCourse(prev => ({
@@ -1420,6 +1814,12 @@ export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
                                     module={module}
                                     moveComponent={moveComponent}
                                     onEdit={() => {
+                                      logger.info('🎵 Abriendo modal de edición:', {
+                                        type: component.type,
+                                        title: component.title,
+                                        content: component.content,
+                                        fileUrl: component.fileUrl
+                                      });
                                       setEditingComponent({ component, moduleId: module.id });
                                     }}
                                     onDelete={() => deleteComponentLocal(component.id, module.id)}
@@ -1434,7 +1834,7 @@ export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
                             {/* Agregar Quiz al módulo */}
                             <div className="mt-4 pt-4 border-t border-gray-200">
                               <Button
-                                onClick={() => addComponentLocal(ComponentTypes.QUIZ, module.id)}
+                                onClick={() => addComponentLocal(BUILDER_COMPONENT_TYPES.QUIZ, module.id)}
                                 variant="secondary"
                                 size="sm"
                                 fullWidth
@@ -1481,7 +1881,7 @@ export const TeacherCourseBuilder: React.FC<TeacherCourseBuilderProps> = ({
                           <div className="flex-1">
                             <input
                               type="text"
-                              value={activity.title}
+                              value={activity.title || ''}
                               onChange={(e) => {
                                 setCourse(prev => ({
                                   ...prev,

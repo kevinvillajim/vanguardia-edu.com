@@ -14,6 +14,7 @@ import { AudioEditor } from './modals/AudioEditor';
 
 interface ComponentData {
   id: string;
+  backendComponentId?: number;
   type: string;
   title: string;
   content?: any;
@@ -55,9 +56,9 @@ export const SpecificComponentModal: React.FC<SpecificComponentModalProps> = ({
     setError(null);
 
     try {
-      // Si el componente tiene un ID real (no temporal), actualizar en backend
-      if (!editedComponent.id.startsWith('component-temp-')) {
-        const result = await courseService.updateComponent(parseInt(editedComponent.id), {
+      // Si el componente tiene un ID de backend, actualizar en backend
+      if (editedComponent.backendComponentId) {
+        const result = await courseService.updateComponent(editedComponent.backendComponentId, {
           title: editedComponent.title,
           content: editedComponent.content,
           metadata: editedComponent.metadata

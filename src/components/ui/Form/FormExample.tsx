@@ -6,8 +6,8 @@ import FormField from "./FormField";
 import Select from "./Select";
 import Switch from "./Switch";
 import FileUpload from "./FileUpload";
-import Button from "@/shared/components/ui/Button/Button";
-import Card from "@/shared/components/ui/Card/Card";
+import { Button } from "@/shared/components";
+import { Card } from "@/shared/components/atoms";
 import ValidatedInput from "./ValidatedInput";
 import { CheckCircle, X, Clock } from 'lucide-react';
 

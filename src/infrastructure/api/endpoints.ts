@@ -35,6 +35,7 @@ export const ENDPOINTS = {
     
     // Teacher specific
     TEACHER_COURSES: '/teacher/courses',
+    TEACHER_GET: (id: number) => `/teacher/courses/${id}`, // Endpoint para obtener curso completo del teacher
     
     // Structure
     UNITS: {
@@ -97,14 +98,33 @@ export const ENDPOINTS = {
     ADMIN: '/admin/dashboard'
   },
 
+  // Category endpoints
+  CATEGORIES: {
+    LIST: '/categories',
+    GET: (id: number) => `/categories/${id}`,
+    TREE: '/categories/tree', // Para obtener estructura jerárquica
+    
+    // Teacher-specific category endpoints
+    TEACHER_CREATE: '/teacher/categories',
+    
+    // Admin-specific category endpoints
+    ADMIN_CREATE: '/admin/categories',
+    ADMIN_UPDATE: (id: number) => `/admin/categories/${id}`,
+    ADMIN_DELETE: (id: number) => `/admin/categories/${id}`,
+    ADMIN_REORDER: '/admin/categories/reorder',
+    ADMIN_STATS: (id: number) => `/admin/categories/${id}/stats`
+  },
+
   // Admin specific endpoints
   ADMIN: {
     USERS: '/admin/users',
     COURSES: '/admin/courses',
+    CATEGORIES: '/admin/categories', // Administración de categorías
     REPORTS: {
       USERS: '/admin/reports/users',
       COURSES: '/admin/reports/courses',
-      ENROLLMENTS: '/admin/reports/enrollments'
+      ENROLLMENTS: '/admin/reports/enrollments',
+      CATEGORIES: '/admin/reports/categories'
     },
     SYSTEM: {
       HEALTH: '/admin/system/health',
@@ -115,7 +135,24 @@ export const ENDPOINTS = {
   // File upload
   FILES: {
     UPLOAD: '/files/upload',
-    DELETE: (filename: string) => `/files/${filename}`
+    DELETE: (filename: string) => `/files/${filename}`,
+    
+    // Chunked upload endpoints
+    CHUNKED_INIT: '/files/chunked/init',
+    CHUNKED_UPLOAD: '/files/chunked/upload',
+    CHUNKED_STATUS: '/files/chunked/status',
+    CHUNKED_FINALIZE: '/files/chunked/finalize',
+    CHUNKED_ABORT: '/files/chunked/abort',
+    
+    // File processing
+    PROCESS_IMAGE: '/files/process/image',
+    GENERATE_THUMBNAIL: '/files/process/thumbnail',
+    EXTRACT_METADATA: '/files/metadata',
+    
+    // File management
+    LIST: '/files',
+    INFO: (fileId: string) => `/files/${fileId}/info`,
+    DOWNLOAD: (fileId: string) => `/files/${fileId}/download`
   },
 
   // Health check
